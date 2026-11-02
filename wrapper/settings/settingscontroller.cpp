@@ -44,6 +44,7 @@ constexpr const char *PanelOrderKey = "layout.panels";
 constexpr const char *NavDividersKey = "layout.dividers";
 constexpr const char *HiddenPanelsKey = "layout.hidden";
 constexpr const char *StartPanelKey = "layout.start";
+constexpr const char *DefaultPanelKey = "layout.default";
 constexpr const char *LibrarySortKey = "library.sort";
 constexpr const char *AlbumSortKey = "library.sort.albums";
 constexpr const char *ArtistSortKey = "library.sort.artists";
@@ -591,6 +592,31 @@ void SettingsController::setStartPanel(const QString &panel)
     m_settings->setValue(StartPanelKey, panel.toStdString());
     scheduleSave();
     emit startPanelChanged();
+}
+
+namespace {
+
+// What can take the player's place (any panel of the bottom bar but Settings).
+bool isBasePanel(const QString &panel)
+{
+    return panel == QLatin1String("player") || defaultPanels().contains(panel);
+}
+
+} // namespace
+
+QString SettingsController::defaultPanel() const
+{
+    const QString panel = QString::fromStdString(m_settings->value(DefaultPanelKey));
+    return isBasePanel(panel) ? panel : QStringLiteral("player");
+}
+
+void SettingsController::setDefaultPanel(const QString &panel)
+{
+    if (panel == defaultPanel() || !isBasePanel(panel))
+        return;
+    m_settings->setValue(DefaultPanelKey, panel.toStdString());
+    scheduleSave();
+    emit defaultPanelChanged();
 }
 
 namespace {

@@ -32,7 +32,8 @@ Rectangle {
         { name: qsTr("Keyboard shortcuts"), icon: "keyboard", hue: 0.7, summary: qsTr("Every key the app knows") },
         { name: qsTr("About"), icon: "info", hue: 0.5, summary: qsTr("Version and your data") },
         { name: qsTr("Layout Customisation"), icon: "layout", hue: 0.75,
-          summary: qsTr("Bottom bar, what opens on start") },
+          summary: android ? qsTr("Bottom bar, default panel")
+                  : qsTr("Bottom bar, what opens on start") },
         { name: qsTr("Seekbar"), icon: "wave", hue: 0.3, summary: qsTr("Animation and thumb style") },
         { name: qsTr("Sleep timer"), icon: "moon", hue: 0.68, summary: qsTr("Pause the music after a while") }
     ]
@@ -52,6 +53,11 @@ Rectangle {
         (panel) => !android || !SettingsController.hiddenPanels.includes(panel)))
     readonly property string startShown: startChoices.includes(SettingsController.startPanel)
                                          ? SettingsController.startPanel : "player"
+    // Phones: the panel in the player's place
+    readonly property var defaultChoices: ["player"].concat(SettingsController.panelOrder.filter(
+        (panel) => !SettingsController.hiddenPanels.includes(panel)))
+    readonly property string defaultShown: defaultChoices.includes(SettingsController.defaultPanel)
+                                           ? SettingsController.defaultPanel : "player"
 
     // Shown: the category groups rise in, one after another.
     function intro() {
@@ -1528,6 +1534,38 @@ Rectangle {
                         }
 
                         SettingsCard {
+                            readonly property bool hiddenHere: !root.android
+                            visible: !hiddenHere // (phones only)
+                            title: qsTr("Default panel")
+
+                            SettingsRow {
+                                Layout.fillWidth: true
+                                title: qsTr("Choose default")
+                                description: qsTr("What opens when the app starts and what you come back to when a panel closes. On the bottom bar the player takes its place.")
+                            }
+
+                            Flow {
+                                Layout.fillWidth: true
+                                spacing: 6
+
+                                Repeater {
+                                    model: root.android ? root.defaultChoices : []
+
+                                    delegate: PillButton {
+                                        required property string modelData
+
+                                        text: root.panelNames[modelData]
+                                        implicitHeight: 32
+                                        active: root.defaultShown === modelData
+                                        onClicked: SettingsController.defaultPanel = modelData
+                                    }
+                                }
+                            }
+                        }
+
+                        SettingsCard {
+                            readonly property bool hiddenHere: root.android // (phones: the default panel opens)
+                            visible: !hiddenHere
                             title: qsTr("Startup")
 
                             SettingsRow {

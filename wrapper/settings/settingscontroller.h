@@ -96,6 +96,8 @@ class SettingsController : public QObject
     Q_PROPERTY(bool navDividers READ navDividers WRITE setNavDividers NOTIFY navDividersChanged)
     // What opens at start: "player", "youtube", "queue", "home" or "library"
     Q_PROPERTY(QString startPanel READ startPanel WRITE setStartPanel NOTIFY startPanelChanged)
+    // Phones: the panel in the player's place ("player", or a bottom-bar panel)
+    Q_PROPERTY(QString defaultPanel READ defaultPanel WRITE setDefaultPanel NOTIFY defaultPanelChanged)
     // The Library's Songs tab: "title", "titleDesc", "newest", "oldest", "modifiedNew",
     // "modifiedOld", "artist" or "album"
     Q_PROPERTY(QString librarySort READ librarySort WRITE setLibrarySort NOTIFY librarySortChanged)
@@ -233,6 +235,8 @@ public:
     Q_INVOKABLE void setPanelHidden(const QString &panel, bool hidden);
     QString startPanel() const;
     void setStartPanel(const QString &panel);
+    QString defaultPanel() const;
+    void setDefaultPanel(const QString &panel);
     QString librarySort() const;
     void setLibrarySort(const QString &sort);
     QString albumSort() const;
@@ -317,6 +321,7 @@ signals:
     void panelsChanged();
     void navDividersChanged();
     void startPanelChanged();
+    void defaultPanelChanged();
     void visualizerEnabledChanged();
     void visualizerStyleChanged();
 

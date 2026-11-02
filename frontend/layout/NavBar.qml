@@ -15,7 +15,8 @@ Rectangle {
         youtube: { icon: "cloud", label: qsTr("YouTube"), tip: qsTr("YouTube Music (Ctrl+2)") },
         queue: { icon: "listMusic", label: qsTr("Queue"), tip: qsTr("Queue (Ctrl+1)") },
         home: { icon: "home", label: qsTr("Home"), tip: qsTr("Home") },
-        library: { icon: "compactDisc", label: qsTr("Library"), tip: qsTr("Library (Ctrl+3)") }
+        library: { icon: "compactDisc", label: qsTr("Library"), tip: qsTr("Library (Ctrl+3)") },
+        player: { icon: "music", label: qsTr("Player"), tip: qsTr("Player") } // (phones: in the default panel's place)
     })
 
     property bool homeOpen: false
@@ -23,12 +24,14 @@ Rectangle {
     property bool youtubeOpen: false
     property bool libraryOpen: false
     property bool settingsOpen: false
+    property bool playerOpen: false
 
     signal homeClicked()
     signal queueClicked()
     signal youtubeClicked()
     signal libraryClicked()
     signal settingsClicked()
+    signal playerClicked()
 
     implicitHeight: 64
     radius: Theme.radiusCard

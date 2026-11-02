@@ -136,11 +136,16 @@ ApplicationWindow {
     Component.onCompleted: {
         if (SettingsController.playlistPinned && SettingsController.homePanelPinned)
             SettingsController.homePanelPinned = false
-        Qt.callLater(openStartPanel) // (once the window has its size)
+        Qt.callLater(() => { // (once the window has its size)
+            openStartPanel()
+            restoreBase("")
+        })
     }
     // What Layout Customisation says to open at start (the player needs nothing).
     function openStartPanel() {
         const name = SettingsController.startPanel
+        if (Theme.touchOnly) // phones: the default panel opens instead (restoreBase)
+            return
         if (name === "player" || panelHidden(name))
             return
         if (!compact)
@@ -153,6 +158,58 @@ ApplicationWindow {
             toggleLibrary()
         else if (name === "home")
             toggleHome()
+    }
+
+    // ---- Phones: the default panel (Layout Customisation) ---------------------------
+    // The chosen panel takes the player's place: it opens on start, and whenever
+    // every drawer and sheet is closed it slides back up. The bottom bar shows a
+    // Player button in its place; the player shows only when asked for (that
+    // button, the mini player, or the default panel itself put away), and Back
+    // from there goes back to the default panel.
+    readonly property string basePanel: Theme.touchOnly && compact
+                                        && !panelHidden(SettingsController.defaultPanel)
+                                        ? SettingsController.defaultPanel : "player"
+    property bool playerUp: false // the player asked for, over the default panel
+    function openBaseScreen() {
+        if (basePanel === "home")
+            homeSheet.shown = true
+        else if (basePanel === "queue")
+            playlistDrawer.open()
+        else if (basePanel === "youtube")
+            youtubeDrawer.open()
+        else if (basePanel === "library")
+            libraryDrawer.open()
+    }
+    function nothingOpen() {
+        return !playlistDrawer.visible && !youtubeDrawer.visible && !libraryDrawer.visible
+               && !homeSheet.shown && !settingsSheet.shown
+    }
+    // Something closed (`closed`: which one, "" if unknown); runs once the others have opened.
+    function restoreBase(closed) {
+        if (basePanel === "player" || !nothingOpen())
+            return
+        if (closed === basePanel) // the default panel itself put away: the player
+            playerUp = true
+        if (!playerUp)
+            openBaseScreen()
+    }
+    // The bottom bar's Player button (in the default panel's place)
+    readonly property bool playerInFront: basePanel !== "player" && playerUp && !anyDrawerOpen
+    function togglePlayer() {
+        if (playerInFront) {
+            showBase()
+        } else {
+            playerUp = true
+            closeDrawers()
+        }
+    }
+    function showBase() {
+        playerUp = false
+        restoreBase("")
+    }
+    onBasePanelChanged: {
+        playerUp = false
+        Qt.callLater(restoreBase, "")
     }
 
     // Panels opened in one layout stay open in the next.
@@ -361,12 +418,20 @@ ApplicationWindow {
     // (their columns stay open). Nothing to go back from: Back leaves the app.
     function backTarget() {
         if (compact) {
-            if (playlistDrawer.opened)
-                return { panel: drawerPlaylist, close: () => playlistDrawer.close() }
-            if (youtubeDrawer.opened)
-                return { panel: drawerYoutube, close: () => youtubeDrawer.close() }
-            if (libraryDrawer.opened)
-                return { panel: drawerLibrary, close: () => libraryDrawer.close() }
+            // The default panel (phones) is the bottom: Back only goes back inside it.
+            const drawers = [[playlistDrawer, drawerPlaylist, "queue"], [youtubeDrawer, drawerYoutube, "youtube"],
+                             [libraryDrawer, drawerLibrary, "library"]]
+            for (const [drawer, panel, name] of drawers) {
+                if (!drawer.opened)
+                    continue
+                if (name !== basePanel)
+                    return { panel: panel, close: () => drawer.close() }
+                if (panel.canGoBack)
+                    return { panel: panel, close: null }
+                return null
+            }
+            if (homeSheet.shown && basePanel === "home") // the bottom, as above
+                return sheetHome.canGoBack ? { panel: sheetHome, close: null } : null
             if (homeSheet.shown)
                 return { panel: sheetHome, close: () => homeSheet.shown = false }
         }
@@ -374,6 +439,8 @@ ApplicationWindow {
             return { panel: settingsPanel, close: () => closeSettings() }
         if (nowPlaying.lyricsOpen)
             return { panel: null, close: () => nowPlaying.lyricsOpen = false }
+        if (compact && basePanel !== "player" && playerUp)
+            return { panel: null, close: () => showBase() }
         if (!compact) {
             const docked = { queue: dockedPlaylist, home: dockedHome, youtube: dockedYoutube, library: dockedLibrary }
             for (const name of [rightShown, leftShown]) {
@@ -717,6 +784,7 @@ ApplicationWindow {
         acceptsDrops: true
         onOpenPlayerRequested: {
             if (window.compact) {
+                window.playerUp = true
                 window.closeDrawers()
             } else {
                 window.showPlayer()
@@ -738,12 +806,16 @@ ApplicationWindow {
         width: window.compact ? room : Math.min(room, 560)
         height: implicitHeight
         z: 5
+        // Phones: the default panel's button gives way to the player's
         panels: SettingsController.panelOrder.filter((panel) => !window.panelHidden(panel))
+                .map((panel) => panel === window.basePanel ? "player" : panel)
+        playerOpen: window.playerInFront
         homeOpen: window.homeDocked || window.homeSheetOpen
         queueOpen: window.playlistDocked || window.queueDrawerOpen
         youtubeOpen: window.youtubeDocked || window.youtubeDrawerOpen
         libraryOpen: window.libraryDocked || window.libraryDrawerOpen
         settingsOpen: window.rightShown === "settings" || window.settingsSheetOpen
+        onPlayerClicked: window.togglePlayer()
         onHomeClicked: window.toggleHome()
         onQueueClicked: window.toggleQueue()
         onYoutubeClicked: window.toggleYoutube()
@@ -758,7 +830,8 @@ ApplicationWindow {
     SlidePanel {
         id: playlistDrawer
         objectName: "playlistDrawer"
-        onAboutToShow: playlistPull.reset()
+        onAboutToShow: { playlistPull.reset(); window.playerUp = false }
+        onClosed: Qt.callLater(window.restoreBase, "queue")
 
         DrawerCard {
             drawer: playlistDrawer
@@ -785,9 +858,12 @@ ApplicationWindow {
     SlidePanel {
         id: youtubeDrawer
         objectName: "youtubeDrawer"
-        onAboutToShow: youtubePull.reset()
+        onAboutToShow: { youtubePull.reset(); window.playerUp = false }
         onOpened: if (window.searchOnOpen) { window.searchOnOpen = false; drawerYoutube.focusSearch() }
-        onClosed: window.searchOnOpen = false
+        onClosed: {
+            window.searchOnOpen = false
+            Qt.callLater(window.restoreBase, "youtube")
+        }
 
         DrawerCard {
             drawer: youtubeDrawer
@@ -814,9 +890,12 @@ ApplicationWindow {
     SlidePanel {
         id: libraryDrawer
         objectName: "libraryDrawer"
-        onAboutToShow: libraryPull.reset()
+        onAboutToShow: { libraryPull.reset(); window.playerUp = false }
         onOpened: if (window.searchOnOpen) { window.searchOnOpen = false; drawerLibrary.focusSearch() }
-        onClosed: window.searchOnOpen = false
+        onClosed: {
+            window.searchOnOpen = false
+            Qt.callLater(window.restoreBase, "library")
+        }
 
         DrawerCard {
             drawer: libraryDrawer
@@ -854,7 +933,14 @@ ApplicationWindow {
         Rectangle {
             id: settingsSheet
             property bool shown: false
-            onShownChanged: if (shown) settingsPull.reset()
+            onShownChanged: {
+                if (shown) {
+                    settingsPull.reset()
+                    window.playerUp = false
+                } else {
+                    Qt.callLater(window.restoreBase, "settings")
+                }
+            }
             property real down: shown ? 0 : 1 // as for settingsCard
             x: Theme.cardGap + window.safeLeft
             width: parent.width - 2 * Theme.cardGap - window.safeLeft - window.safeRight
@@ -884,7 +970,14 @@ ApplicationWindow {
         Rectangle {
             id: homeSheet
             property bool shown: false
-            onShownChanged: if (shown) homePull.reset()
+            onShownChanged: {
+                if (shown) {
+                    homePull.reset()
+                    window.playerUp = false
+                } else {
+                    Qt.callLater(window.restoreBase, "home")
+                }
+            }
             property real down: shown ? 0 : 1 // as for settingsCard
             x: Theme.cardGap + window.safeLeft
             width: parent.width - 2 * Theme.cardGap - window.safeLeft - window.safeRight
