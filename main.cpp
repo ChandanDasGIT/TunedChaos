@@ -27,6 +27,7 @@
 #include <QNetworkInformation>
 #include <QProcess>
 #include <QQmlApplicationEngine>
+#include <QQuickWindow>
 #include <QQuickStyle>
 #include <QStyleHints>
 #include <QWindow>
@@ -37,7 +38,9 @@
 #include "wrapper/update/appupdater.h"
 
 #include <QDir>
+#include <QEventLoop>
 #include <QFile>
+#include <QTimer>
 #include <QQmlContext>
 #endif
 
@@ -118,6 +121,33 @@ int main(int argc, char *argv[])
     // Controllers must exist before QML asks for the singletons.
     SettingsController settings(nullptr);
     settings.setActiveInterfaceScale(interfaceScale);
+
+#ifdef Q_OS_ANDROID
+    // The loading screen (frontend/splash), in the app's dark or light colors,
+    // until the app has drawn itself (below). It gets its first frame on screen
+    // before the loading goes on; its animation then runs on the render thread.
+    auto *splash = new QQmlApplicationEngine;
+    {
+        const QString mode = settings.themeMode();
+        const bool dark = mode == QLatin1String("system")
+                              ? QGuiApplication::styleHints()->colorScheme() != Qt::ColorScheme::Light
+                              : mode != QLatin1String("light");
+        splash->setInitialProperties({{QStringLiteral("dark"), dark}});
+        splash->loadFromModule("TunedChaos", "Splash");
+        if (auto *window = qobject_cast<QQuickWindow *>(splash->rootObjects().value(0))) {
+            // A few frames first, so it is already moving smoothly when the
+            // loading takes the processor.
+            QEventLoop shown;
+            int frames = 0;
+            QObject::connect(window, &QQuickWindow::frameSwapped, &shown, [&] {
+                if (++frames >= 4)
+                    shown.quit();
+            }, Qt::QueuedConnection);
+            QTimer::singleShot(400, &shown, &QEventLoop::quit);
+            shown.exec();
+        }
+    }
+#endif
     PlayerController player(nullptr);
     PlaylistController playlist(&player, &settings, nullptr);
     LibraryController library(&playlist, nullptr);
@@ -196,6 +226,12 @@ int main(int argc, char *argv[])
     engine.loadFromModule("TunedChaos", "Main");
 #ifdef Q_OS_ANDROID
     appUpdater.check(); // (after the load: the dialog listens from Main.qml)
+    // The app has drawn itself: the loading screen goes.
+    if (auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().value(0)))
+        QObject::connect(window, &QQuickWindow::frameSwapped, &app, [splash] { splash->deleteLater(); },
+                         static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::SingleShotConnection));
+    else
+        splash->deleteLater();
 #endif
 
     const auto raiseWindow = [&engine] {

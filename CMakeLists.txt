@@ -286,6 +286,7 @@ qt_add_qml_module(TunedChaos
         wrapper/youtube/ytmetadatacontroller.h
     QML_FILES
         Main.qml
+        frontend/splash/Splash.qml
         frontend/Theme.qml
         frontend/Util.qml
         frontend/Icon.qml
