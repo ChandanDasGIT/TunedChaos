@@ -139,6 +139,7 @@ ApplicationWindow {
         Qt.callLater(() => { // (once the window has its size)
             openStartPanel()
             restoreBase("")
+            screenSettle.restart() // (the first screen, for Back)
         })
     }
     // What Layout Customisation says to open at start (the player needs nothing).
@@ -210,6 +211,74 @@ ApplicationWindow {
     onBasePanelChanged: {
         playerUp = false
         Qt.callLater(restoreBase, "")
+    }
+
+    // ---- Phones: Back returns to the screen you came from -------------------------
+    // Every screen change (a panel, Home, Settings or the player in front), however
+    // it happened, remembers the screen left. A screen only counts once it has
+    // stayed a moment, so the in-between steps of a change (a panel closing while
+    // the next opens, the default panel coming back) are never remembered.
+    // Back forgets the screen it leaves, except when it lands on the default panel:
+    // then Back once more returns to that screen (only once, so Back can't bounce
+    // between the two for ever).
+    readonly property bool historyOn: Theme.touchOnly && compact
+    readonly property string screenNow: settingsSheet.shown ? "settings"
+                                      : homeSheet.shown ? "home"
+                                      : playlistDrawer.visible ? "queue"
+                                      : youtubeDrawer.visible ? "youtube"
+                                      : libraryDrawer.visible ? "library" : "player"
+    property string screenSettled: ""
+    property var screenHistory: [] // oldest first, each screen once
+    property double backAt: 0 // when Back was last pressed: the change after it is Back's
+    property bool settledByBack: false // the screen in front was reached by Back
+    onScreenNowChanged: if (historyOn) screenSettle.restart()
+    onHistoryOnChanged: if (!historyOn) screenHistory = []
+    Timer {
+        id: screenSettle
+        interval: 350
+        onTriggered: {
+            const now = window.screenNow
+            const left = window.screenSettled
+            if (now === left)
+                return
+            window.screenSettled = now
+            const leftByBack = window.settledByBack
+            const byBack = Date.now() - window.backAt < 1500
+            window.settledByBack = byBack
+            window.backAt = 0
+            if (left === "" || (byBack && (now !== window.basePanel || leftByBack)))
+                return
+            const list = window.screenHistory.filter((name) => name !== left && name !== now)
+            list.push(left)
+            window.screenHistory = list.slice(-20)
+        }
+    }
+    function previousScreen() {
+        if (!historyOn)
+            return ""
+        for (let i = screenHistory.length - 1; i >= 0; --i) {
+            const name = screenHistory[i]
+            if (name !== screenNow && !panelHidden(name))
+                return name
+        }
+        return ""
+    }
+    function goToPrevious() {
+        const name = previousScreen()
+        screenHistory = screenHistory.slice(0, screenHistory.lastIndexOf(name))
+        closeDrawers()
+        if (name === "player")
+            playerUp = true
+        else if (name === "settings")
+            settingsSheet.shown = true
+        else if (name === "home")
+            homeSheet.shown = true
+        else if (name === "queue")
+            playlistDrawer.open()
+        else if (name === "youtube")
+            youtubeDrawer.open()
+        else if (name === "library")
+            libraryDrawer.open()
     }
 
     // Panels opened in one layout stay open in the next.
@@ -418,18 +487,26 @@ ApplicationWindow {
     // (their columns stay open). Nothing to go back from: Back leaves the app.
     function backTarget() {
         if (compact) {
+            // Phones: after a page inside, back to the screen you came from.
+            const previous = previousScreen() !== "" ? () => goToPrevious() : null
             // The default panel (phones) is the bottom: Back only goes back inside it.
             const drawers = [[playlistDrawer, drawerPlaylist, "queue"], [youtubeDrawer, drawerYoutube, "youtube"],
                              [libraryDrawer, drawerLibrary, "library"]]
             for (const [drawer, panel, name] of drawers) {
                 if (!drawer.opened)
                     continue
+                if (previous)
+                    return { panel: panel, close: previous }
                 if (name !== basePanel)
                     return { panel: panel, close: () => drawer.close() }
                 if (panel.canGoBack)
                     return { panel: panel, close: null }
                 return null
             }
+            if (homeSheet.shown && previous)
+                return { panel: sheetHome, close: previous }
+            if (settingsSheet.shown && previous)
+                return { panel: settingsPanel, close: previous }
             if (homeSheet.shown && basePanel === "home") // the bottom, as above
                 return sheetHome.canGoBack ? { panel: sheetHome, close: null } : null
             if (homeSheet.shown)
@@ -439,6 +516,8 @@ ApplicationWindow {
             return { panel: settingsPanel, close: () => closeSettings() }
         if (nowPlaying.lyricsOpen)
             return { panel: null, close: () => nowPlaying.lyricsOpen = false }
+        if (compact && !anyDrawerOpen && previousScreen() !== "")
+            return { panel: null, close: () => goToPrevious() }
         if (compact && basePanel !== "player" && playerUp)
             return { panel: null, close: () => showBase() }
         if (!compact) {
@@ -454,8 +533,14 @@ ApplicationWindow {
     readonly property bool canGoBack: backTarget() !== null
     function goBack() {
         const target = backTarget()
-        if (!target)
+        if (!target) { // phones: leaving the app takes a second Back
+            if (Theme.touchOnly) {
+                toast.show(qsTr("Press Back again to exit"))
+                exitArmed.restart()
+            }
             return
+        }
+        backAt = Date.now()
         if (target.panel && target.panel.back())
             return
         if (target.close)
@@ -466,7 +551,10 @@ ApplicationWindow {
 
     AppShortcuts {
         dialogOpen: window.dialogOpen
-        escapeEnabled: !dialogOpen && Util.openMenus === 0 && window.canGoBack
+        // (Phones: always, but for a moment after the "again to exit" note, so the
+        // second Back reaches Android and leaves the app as usual.)
+        escapeEnabled: !dialogOpen && Util.openMenus === 0
+                       && (window.canGoBack || (Theme.touchOnly && !exitArmed.running))
         onEscapePressed: window.goBack()
         onToggleLyrics: nowPlaying.lyricsOpen = !nowPlaying.lyricsOpen
         onFocusSearch: window.focusSearch()
@@ -1215,6 +1303,11 @@ ApplicationWindow {
     Connections {
         target: LocalLibraryController
         function onNotice(text) { toast.show(text) }
+    }
+
+    Timer {
+        id: exitArmed
+        interval: 2000
     }
 
     Toast {
