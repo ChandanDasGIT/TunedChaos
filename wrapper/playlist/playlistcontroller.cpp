@@ -536,7 +536,7 @@ void PlaylistController::sortBy(int column)
     const Playlist::SortColumn sortColumn = toBackend(column);
     const bool descending = sortColumn == m_playlist.sortColumn() ? !m_playlist.sortDescending() : false;
 
-    m_model->sort(sortColumn, descending);
+    m_model->sortBy(sortColumn, descending);
     m_settings->setSort(int(sortColumn), descending);
     emit sortChanged();
     emit currentChanged();

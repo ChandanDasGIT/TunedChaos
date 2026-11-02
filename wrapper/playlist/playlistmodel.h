@@ -46,7 +46,7 @@ public:
     void moveTrack(int from, int to);
     void setTracks(std::vector<Track> tracks); // replaces everything
     void clear();
-    void sort(Playlist::SortColumn column, bool descending);
+    void sortBy(Playlist::SortColumn column, bool descending);
     // Call after the playlist's current track changed (was `previousRow`).
     void refreshCurrent(int previousRow);
     void refreshRow(int row); // its song's tags changed

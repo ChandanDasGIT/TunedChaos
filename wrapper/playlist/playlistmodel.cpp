@@ -115,7 +115,7 @@ void PlaylistModel::clear()
     endResetModel();
 }
 
-void PlaylistModel::sort(Playlist::SortColumn column, bool descending)
+void PlaylistModel::sortBy(Playlist::SortColumn column, bool descending)
 {
     beginResetModel();
     m_playlist.sort(column, descending);
