@@ -533,11 +533,9 @@ ApplicationWindow {
     readonly property bool canGoBack: backTarget() !== null
     function goBack() {
         const target = backTarget()
-        if (!target) { // phones: leaving the app takes a second Back
-            if (Theme.touchOnly) {
-                toast.show(qsTr("Press Back again to exit"))
-                exitArmed.restart()
-            }
+        if (!target) { // phones: Back at the bottom puts the app in the background
+            if (Theme.touchOnly)
+                Files.minimizeApp()
             return
         }
         backAt = Date.now()
@@ -551,10 +549,9 @@ ApplicationWindow {
 
     AppShortcuts {
         dialogOpen: window.dialogOpen
-        // (Phones: always, but for a moment after the "again to exit" note, so the
-        // second Back reaches Android and leaves the app as usual.)
+        // (Phones: always, so Back never reaches Android, which would close the app.)
         escapeEnabled: !dialogOpen && Util.openMenus === 0
-                       && (window.canGoBack || (Theme.touchOnly && !exitArmed.running))
+                       && (window.canGoBack || Theme.touchOnly)
         onEscapePressed: window.goBack()
         onToggleLyrics: nowPlaying.lyricsOpen = !nowPlaying.lyricsOpen
         onFocusSearch: window.focusSearch()
@@ -1303,11 +1300,6 @@ ApplicationWindow {
     Connections {
         target: LocalLibraryController
         function onNotice(text) { toast.show(text) }
-    }
-
-    Timer {
-        id: exitArmed
-        interval: 2000
     }
 
     Toast {

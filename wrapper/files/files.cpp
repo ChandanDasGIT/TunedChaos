@@ -5,6 +5,10 @@
 #include <QStandardPaths>
 #include <QStorageInfo>
 
+#ifdef Q_OS_ANDROID
+#include <QJniObject>
+#endif
+
 namespace {
 
 QVariantMap place(const QString &name, const QString &path)
@@ -17,6 +21,13 @@ QVariantMap place(const QString &name, const QString &path)
 Files::Files(QObject *parent)
     : QObject(parent)
 {
+}
+
+void Files::minimizeApp() const
+{
+#ifdef Q_OS_ANDROID
+    QJniObject::callStaticMethod<void>("io/github/chandandasgit/tunedchaos/MainActivity", "minimize");
+#endif
 }
 
 QString Files::toPath(const QUrl &url) const

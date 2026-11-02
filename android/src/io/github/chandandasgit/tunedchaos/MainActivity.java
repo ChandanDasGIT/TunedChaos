@@ -14,9 +14,26 @@ import org.qtproject.qt.android.bindings.QtActivity;
 // always a fresh one.
 public class MainActivity extends QtActivity {
     private static final long QUIT_GRACE_MS = 1000;
+    private static MainActivity instance;
+
+    @Override
+    public void onCreate(android.os.Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        instance = this;
+    }
+
+    // Back with nothing left to go back from: the app goes to the background
+    // (like Home) instead of closing.
+    public static void minimize() {
+        final MainActivity activity = instance;
+        if (activity != null)
+            activity.runOnUiThread(() -> activity.moveTaskToBack(true));
+    }
 
     @Override
     protected void onDestroy() {
+        if (instance == this)
+            instance = null;
         if (isFinishing()) {
             Thread watchdog = new Thread(() -> {
                 try {

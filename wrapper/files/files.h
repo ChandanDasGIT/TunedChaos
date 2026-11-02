@@ -18,6 +18,8 @@ class Files : public QObject
 public:
     explicit Files(QObject *parent = nullptr);
 
+    // Android: sends the app to the background (Back at the bottom). Else nothing.
+    Q_INVOKABLE void minimizeApp() const;
     Q_INVOKABLE QString toPath(const QUrl &url) const;
     Q_INVOKABLE QUrl toUrl(const QString &path) const;
     // For showing: the platform's own separators ("C:\Music")
