@@ -9,13 +9,18 @@ Item {
 
     property int tab: HostedController.SongsTab
     readonly property var tabLists: [HostedController.songs, HostedController.albums,
-                                     HostedController.artists, HostedController.playlists,
-                                     HostedController.folderEntries]
+                                     HostedController.artists, HostedController.genres,
+                                     HostedController.playlists, HostedController.folderEntries]
+    readonly property bool letters: HostedController.letterTabs[tab] === true
     readonly property bool inFolders: tab === HostedController.FoldersTab
     readonly property int folderSongCount: HostedController.folderEntries.filter(e => e.kind === "song").length
 
     // Back: out of an album / artist / playlist, or up one folder (false: nothing to go back from)
     function back() {
+        if (letterGrid.visible) {
+            letterGrid.visible = false
+            return true
+        }
         if (HostedController.detailOpen) {
             HostedController.closeDetail()
             return true
@@ -25,6 +30,7 @@ Item {
 
     onVisibleChanged: if (visible) HostedController.load(tab)
     onTabChanged: {
+        letterGrid.visible = false
         HostedController.closeDetail()
         HostedController.load(tab)
     }
@@ -171,6 +177,7 @@ Item {
                 { icon: "music", label: qsTr("Songs") },
                 { icon: "compactDisc", label: qsTr("Albums") },
                 { icon: "user", label: qsTr("Artists") },
+                { icon: "music", label: qsTr("Genres") },
                 { icon: "listMusic", label: qsTr("Playlists") },
                 { icon: "folder", label: qsTr("Folders") }
             ]
@@ -260,32 +267,53 @@ Item {
             model: root.tabLists[root.tab]
             ScrollBar.vertical: ScrollBar {}
 
-            delegate: HostedRow {
+            delegate: Column {
+                id: entry
+
                 required property var modelData
                 required property int index
 
-                // A song: on the Songs tab, or in a folder (after its folders)
-                readonly property bool song: root.tab === HostedController.SongsTab || modelData.kind === "song"
-                readonly property int songIndex: root.inFolders ? index - (list.count - root.folderSongCount) : index
-
                 width: ListView.view.width
-                thumbnail: modelData.thumbnail || ""
-                icon: modelData.kind === "folder" ? "folder" : song ? "music" : "compactDisc"
-                title: song ? modelData.title : modelData.name
-                subtitle: song ? [modelData.artist, modelData.album].filter(s => s).join("  ·  ") : modelData.subtitle
-                duration: song ? modelData.durationMs : -1
-                playing: song && modelData.path === PlayerController.source
-                onTapped: {
-                    if (modelData.kind === "folder")
-                        HostedController.openFolder(modelData.id, modelData.name)
-                    else if (song)
-                        HostedController.play(root.inFolders ? HostedController.FolderList : HostedController.SongsList,
-                                              songIndex)
-                    else
-                        HostedController.open(root.tab, modelData.id, modelData.name, modelData.thumbnail)
+
+                // The first of its letter: the letter's header above it
+                LetterHeader {
+                    width: parent.width
+                    visible: root.letters && (entry.index === 0
+                                              || list.model[entry.index - 1].letter !== entry.modelData.letter)
+                    letter: entry.modelData.letter || ""
+                    onTapped: {
+                        letterGrid.starts = HostedController.letterStarts(root.tab)
+                        letterGrid.visible = true
+                    }
                 }
-                onQueueRequested: HostedController.addToQueue(root.inFolders ? HostedController.FolderList
-                                                                             : HostedController.SongsList, songIndex)
+
+                HostedRow {
+                    readonly property var modelData: entry.modelData
+                    readonly property int index: entry.index
+
+                    // A song: on the Songs tab, or in a folder (after its folders)
+                    readonly property bool song: root.tab === HostedController.SongsTab || modelData.kind === "song"
+                    readonly property int songIndex: root.inFolders ? index - (list.count - root.folderSongCount) : index
+
+                    width: parent.width
+                    thumbnail: modelData.thumbnail || ""
+                    icon: modelData.kind === "folder" ? "folder" : song ? "music" : "compactDisc"
+                    title: song ? modelData.title : modelData.name
+                    subtitle: song ? [modelData.artist, modelData.album].filter(s => s).join("  ·  ") : modelData.subtitle
+                    duration: song ? modelData.durationMs : -1
+                    playing: song && modelData.path === PlayerController.source
+                    onTapped: {
+                        if (modelData.kind === "folder")
+                            HostedController.openFolder(modelData.id, modelData.name)
+                        else if (song)
+                            HostedController.play(root.inFolders ? HostedController.FolderList : HostedController.SongsList,
+                                                  songIndex)
+                        else
+                            HostedController.open(root.tab, modelData.id, modelData.name, modelData.thumbnail)
+                    }
+                    onQueueRequested: HostedController.addToQueue(root.inFolders ? HostedController.FolderList
+                                                                                 : HostedController.SongsList, songIndex)
+                }
             }
         }
 
@@ -359,6 +387,18 @@ Item {
         }
     }
 
+    LetterJumpGrid {
+        id: letterGrid
+        anchors.fill: parent
+        visible: false
+        z: 50
+        onChosen: (row) => {
+            list.positionViewAtIndex(row, ListView.Beginning)
+            visible = false
+        }
+        onClosed: visible = false
+    }
+
     // The tab's ways to sort (what the server can do), the one in use checked
     ThemedMenu {
         id: sortMenu
@@ -369,11 +409,17 @@ Item {
                      { id: "artist", text: qsTr("Artist") }, { id: "album", text: qsTr("Album") }],
                     [{ id: "name", text: qsTr("Name A–Z") }, { id: "nameDesc", text: qsTr("Name Z–A") },
                      { id: "newest", text: qsTr("Newest added") }, { id: "oldest", text: qsTr("Oldest added") },
-                     { id: "artist", text: qsTr("Artist") }, { id: "year", text: qsTr("Year") }],
-                    [{ id: "name", text: qsTr("Name A–Z") }, { id: "nameDesc", text: qsTr("Name Z–A") }],
+                     { id: "artist", text: qsTr("Artist") }, { id: "year", text: qsTr("Year") },
+                     { id: "mostSongs", text: qsTr("Most songs") }, { id: "fewestSongs", text: qsTr("Fewest songs") }],
                     [{ id: "name", text: qsTr("Name A–Z") }, { id: "nameDesc", text: qsTr("Name Z–A") },
-                     { id: "newest", text: qsTr("Newest added") }, { id: "oldest", text: qsTr("Oldest added") }],
-                    [{ id: "name", text: qsTr("Name A–Z") }, { id: "nameDesc", text: qsTr("Name Z–A") }]][root.tab]
+                     { id: "mostSongs", text: qsTr("Most songs") }, { id: "fewestSongs", text: qsTr("Fewest songs") }],
+                    [{ id: "name", text: qsTr("Name A–Z") }, { id: "nameDesc", text: qsTr("Name Z–A") },
+                     { id: "mostSongs", text: qsTr("Most songs") }, { id: "fewestSongs", text: qsTr("Fewest songs") }],
+                    [{ id: "name", text: qsTr("Name A–Z") }, { id: "nameDesc", text: qsTr("Name Z–A") },
+                     { id: "newest", text: qsTr("Newest added") }, { id: "oldest", text: qsTr("Oldest added") },
+                     { id: "mostSongs", text: qsTr("Most songs") }, { id: "fewestSongs", text: qsTr("Fewest songs") }],
+                    [{ id: "name", text: qsTr("Name A–Z") }, { id: "nameDesc", text: qsTr("Name Z–A") },
+                     { id: "mostSongs", text: qsTr("Most items") }, { id: "fewestSongs", text: qsTr("Fewest items") }]][root.tab]
 
             delegate: Action {
                 required property var modelData

@@ -39,6 +39,7 @@ class HostedController : public QObject
     Q_PROPERTY(QVariantList songs READ songs NOTIFY listsChanged)
     Q_PROPERTY(QVariantList albums READ albums NOTIFY listsChanged)
     Q_PROPERTY(QVariantList artists READ artists NOTIFY listsChanged)
+    Q_PROPERTY(QVariantList genres READ genres NOTIFY listsChanged)
     Q_PROPERTY(QVariantList playlists READ playlists NOTIFY listsChanged)
     // An opened album / artist / playlist
     Q_PROPERTY(bool detailOpen READ detailOpen NOTIFY detailChanged)
@@ -51,9 +52,12 @@ class HostedController : public QObject
     Q_PROPERTY(QVariantList folderCrumbs READ folderCrumbs NOTIFY folderChanged)
     Q_PROPERTY(QVariantList folderEntries READ folderEntries NOTIFY folderChanged)
     Q_PROPERTY(bool folderHasSongs READ folderHasSongs NOTIFY folderChanged)
+    // Letter groups per tab (Settings > Library on, the tab sorted by name; not Folders).
+    // Songs and lists carry a "letter".
+    Q_PROPERTY(QVariantList letterTabs READ letterTabs NOTIFY letterTabsChanged)
 
 public:
-    enum Tab { SongsTab, AlbumsTab, ArtistsTab, PlaylistsTab, FoldersTab };
+    enum Tab { SongsTab, AlbumsTab, ArtistsTab, GenresTab, PlaylistsTab, FoldersTab };
     Q_ENUM(Tab)
     enum List { SongsList, DetailList, FolderList }; // where a song is played from
     Q_ENUM(List)
@@ -72,6 +76,10 @@ public:
     QVariantList songs() const { return m_songs; }
     QVariantList albums() const { return m_albums; }
     QVariantList artists() const { return m_artists; }
+    QVariantList genres() const { return m_genres; }
+    QVariantList letterTabs() const;
+    // Where each letter starts in a tab's list: { "A": 0, "B": 12, ... }
+    Q_INVOKABLE QVariantMap letterStarts(int tab) const;
     QVariantList playlists() const { return m_playlists; }
     bool detailOpen() const { return !m_detailTitle.isEmpty(); }
     QString detailTitle() const { return m_detailTitle; }
@@ -104,6 +112,7 @@ signals:
     void listsChanged();
     void detailChanged();
     void folderChanged();
+    void letterTabsChanged();
     void notice(const QString &text);
 
 private:
@@ -127,11 +136,12 @@ private:
     int m_busy = 0;
     int m_generation = 0; // signing in / out: answers for the account before are dropped
     QString m_error;
-    bool m_loaded[5] = {};
+    bool m_loaded[6] = {};
     std::vector<::Track> m_songTracks, m_detailTracks, m_folderTracks;
     QVariantList m_folderCrumbs, m_folderEntries;
     int m_folderRequest = 0; // the folder asked for last (older answers are dropped)
-    QVariantList m_songs, m_albums, m_artists, m_playlists, m_detailSongs;
+    QVariantList m_songs, m_albums, m_artists, m_genres, m_playlists, m_detailSongs;
+    QVariantList &listOf(int tab); // a tab's list of albums / artists / genres / playlists
     QString m_detailTitle, m_detailThumbnail;
     QThreadPool m_pool;
 };

@@ -39,7 +39,7 @@ struct HostedSong
     int64_t durationMs = 0;
 };
 
-// An album, artist, playlist or folder: something with songs in it.
+// An album, artist, genre, playlist or folder: something with songs in it.
 struct HostedCollection
 {
     std::string id;
@@ -65,10 +65,12 @@ std::string songId(const std::string &path);
 class HostedServer
 {
 public:
-    enum class Kind { Albums, Artists, Playlists, Folders };
+    enum class Kind { Albums, Artists, Genres, Playlists, Folders };
     // How a list comes back (a kind of server may ignore what it can't do)
-    enum class Sort { Name, NameDesc, Newest, Oldest, Artist, Album, Year };
+    enum class Sort { Name, NameDesc, Newest, Oldest, Artist, Album, Year, MostSongs, FewestSongs };
     static Sort sortFromId(const std::string &id); // "name", "nameDesc", "newest"... (unknown: Name)
+    // Most / fewest songs: sorted here, by songCount (name order for ties).
+    static void sortBySongCount(std::vector<HostedCollection> &list, Sort sort);
 
     virtual ~HostedServer() = default;
 

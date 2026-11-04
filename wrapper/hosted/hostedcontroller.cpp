@@ -2,6 +2,7 @@
 
 #include "backend/hosted/hostedserver/hostedserver.h"
 #include "backend/hosted/hostedstore/hostedstore.h"
+#include "backend/library/letterindex/letterindex.h"
 #include "backend/library/track/track.h"
 #include "wrapper/files/files.h"
 #include "wrapper/player/playercontroller.h"
@@ -15,6 +16,22 @@ namespace {
 constexpr int CoverSize = 300;
 
 QString qs(const std::string &s) { return QString::fromStdString(s); }
+
+QString letterOf(const std::string &name)
+{
+    return QString::fromStdString(LetterIndex::letterOf(name));
+}
+
+HostedServer::Kind kindOf(int tab)
+{
+    switch (tab) {
+    case HostedController::AlbumsTab: return HostedServer::Kind::Albums;
+    case HostedController::ArtistsTab: return HostedServer::Kind::Artists;
+    case HostedController::GenresTab: return HostedServer::Kind::Genres;
+    case HostedController::FoldersTab: return HostedServer::Kind::Folders;
+    default: return HostedServer::Kind::Playlists;
+    }
+}
 
 QString countText(int count)
 {
@@ -40,6 +57,8 @@ HostedController::HostedController(PlayerController *player, PlaylistController 
     m_pool.setMaxThreadCount(2);
     useAccount();
 
+    connect(m_settings, &SettingsController::letterGroupsChanged, this, &HostedController::letterTabsChanged);
+    connect(m_settings, &SettingsController::hostedSortsChanged, this, &HostedController::letterTabsChanged);
     // A tab sorted differently: loaded again (the server sorts), shown ones at once
     connect(m_settings, &SettingsController::hostedSortsChanged, this, [this] {
         for (int tab = SongsTab; tab <= FoldersTab; ++tab)
@@ -102,6 +121,7 @@ void HostedController::useAccount()
     m_songs.clear();
     m_albums.clear();
     m_artists.clear();
+    m_genres.clear();
     m_playlists.clear();
     m_detailSongs.clear();
     m_detailTitle.clear();
@@ -139,7 +159,8 @@ QVariantList HostedController::toSongList(const std::vector<::Track> &tracks) co
                                {QStringLiteral("artist"), qs(t.artist)},
                                {QStringLiteral("album"), qs(t.album)},
                                {QStringLiteral("durationMs"), qint64(t.durationMs)},
-                               {QStringLiteral("thumbnail"), qs(t.thumbnailUrl)}});
+                               {QStringLiteral("thumbnail"), qs(t.thumbnailUrl)},
+                               {QStringLiteral("letter"), letterOf(t.title)}});
     return out;
 }
 
@@ -219,8 +240,7 @@ void HostedController::load(int tab)
         return;
     }
 
-    const auto kind = tab == AlbumsTab ? HostedServer::Kind::Albums
-                    : tab == ArtistsTab ? HostedServer::Kind::Artists : HostedServer::Kind::Playlists;
+    const HostedServer::Kind kind = kindOf(tab);
     runAsync([account = *account, kind, sort] {
                  std::unique_ptr<HostedServer> server = HostedServer::open(account);
                  auto list = server ? server->collections(kind, sort) : std::nullopt;
@@ -244,10 +264,11 @@ void HostedController::load(int tab)
                          {QStringLiteral("name"), qs(c.name)},
                          {QStringLiteral("subtitle"), subtitle},
                          {QStringLiteral("count"), c.songCount},
+                         {QStringLiteral("letter"), letterOf(c.name)},
                          {QStringLiteral("thumbnail"),
                           qs(m_store->coverUrl(m_accountId.toStdString(), c.coverId, CoverSize))}});
                  }
-                 (tab == AlbumsTab ? m_albums : tab == ArtistsTab ? m_artists : m_playlists) = list;
+                 listOf(tab) = list;
                  emit listsChanged();
              });
 }
@@ -263,8 +284,7 @@ void HostedController::open(int tab, const QString &id, const QString &name, con
     m_detailSongs.clear();
     emit detailChanged();
 
-    const auto kind = tab == AlbumsTab ? HostedServer::Kind::Albums
-                    : tab == ArtistsTab ? HostedServer::Kind::Artists : HostedServer::Kind::Playlists;
+    const HostedServer::Kind kind = kindOf(tab);
     runAsync([account = *account, kind, id = id.toStdString()] {
                  std::unique_ptr<HostedServer> server = HostedServer::open(account);
                  auto songs = server ? server->songsOf(kind, id) : std::nullopt;
@@ -428,4 +448,41 @@ void HostedController::playFolder()
                  }
                  m_playlist->playTitled(std::move(tracks), 0, name, false);
              });
+}
+
+QVariantList &HostedController::listOf(int tab)
+{
+    switch (tab) {
+    case AlbumsTab: return m_albums;
+    case ArtistsTab: return m_artists;
+    case GenresTab: return m_genres;
+    default: return m_playlists;
+    }
+}
+
+QVariantList HostedController::letterTabs() const
+{
+    QVariantList shown;
+    const QStringList sorts = m_settings->hostedSorts();
+    for (int tab = SongsTab; tab <= FoldersTab; ++tab) {
+        const QString sort = sorts.value(tab);
+        shown << (m_settings->letterGroups() && tab != FoldersTab
+                  && (sort == QLatin1String("name") || sort == QLatin1String("nameDesc")));
+    }
+    return shown;
+}
+
+QVariantMap HostedController::letterStarts(int tab) const
+{
+    const QVariantList &list = tab == SongsTab ? m_songs
+                             : tab == AlbumsTab ? m_albums
+                             : tab == ArtistsTab ? m_artists
+                             : tab == GenresTab ? m_genres : m_playlists;
+    QVariantMap starts;
+    for (int i = 0; i < list.size(); ++i) {
+        const QString letter = list[i].toMap().value(QStringLiteral("letter")).toString();
+        if (!starts.contains(letter))
+            starts.insert(letter, i);
+    }
+    return starts;
 }

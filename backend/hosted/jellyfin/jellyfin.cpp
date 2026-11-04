@@ -107,7 +107,9 @@ HostedCollection collectionOf(const json &item, bool album)
     c.name = text(item, "Name");
     c.subtitle = album ? text(item, "AlbumArtist") : std::string();
     c.coverId = hasPrimaryImage(item) ? c.id : std::string();
-    c.songCount = int(number(item, "ChildCount"));
+    c.songCount = int(number(item, "SongCount")); // artists, genres (Fields=ItemCounts)
+    if (c.songCount == 0)
+        c.songCount = int(number(item, "ChildCount")); // albums, playlists, folders
     c.year = int(number(item, "ProductionYear"));
     return c;
 }
@@ -134,6 +136,8 @@ std::string sortQuery(HostedServer::Sort sort, bool songs)
                      : "&SortBy=AlbumArtist,SortName&SortOrder=Ascending";
     case Sort::Album: return "&SortBy=Album" + inAlbum + ",SortName&SortOrder=Ascending";
     case Sort::Year: return "&SortBy=ProductionYear,SortName&SortOrder=Descending";
+    case Sort::MostSongs:
+    case Sort::FewestSongs: return "&SortBy=SortName&SortOrder=Ascending"; // counted here after
     }
     return "&SortBy=SortName";
 }
@@ -231,7 +235,11 @@ std::optional<std::vector<HostedCollection>> JellyfinServer::collections(Kind ki
                 "&Fields=ChildCount&EnableTotalRecordCount=false" + sortQuery(sort, false);
         break;
     case Kind::Artists:
-        query = "/Artists/AlbumArtists?UserId=" + user + "&EnableTotalRecordCount=false"
+        query = "/Artists/AlbumArtists?UserId=" + user + "&Fields=ItemCounts&EnableTotalRecordCount=false"
+                + sortQuery(sort == Sort::NameDesc ? sort : Sort::Name, false);
+        break;
+    case Kind::Genres:
+        query = "/MusicGenres?UserId=" + user + "&Fields=ItemCounts&EnableTotalRecordCount=false"
                 + sortQuery(sort == Sort::NameDesc ? sort : Sort::Name, false);
         break;
     case Kind::Playlists:
@@ -256,6 +264,7 @@ std::optional<std::vector<HostedCollection>> JellyfinServer::collections(Kind ki
     for (const json &item : *items)
         if (item.is_object())
             out.push_back(collectionOf(item, kind == Kind::Albums));
+    sortBySongCount(out, sort);
     return out;
 }
 
@@ -269,6 +278,9 @@ std::optional<std::vector<HostedSong>> JellyfinServer::songsOf(Kind kind, const 
                 + "&SortBy=ParentIndexNumber,IndexNumber,SortName" + common;
     else if (kind == Kind::Folders) // everything under it
         query = "/Users/" + user + "/Items?ParentId=" + HttpClient::urlEncode(id)
+                + "&SortBy=Album,ParentIndexNumber,IndexNumber,SortName" + common;
+    else if (kind == Kind::Genres)
+        query = "/Users/" + user + "/Items?GenreIds=" + HttpClient::urlEncode(id)
                 + "&SortBy=Album,ParentIndexNumber,IndexNumber,SortName" + common;
     else if (kind == Kind::Artists)
         query = "/Users/" + user + "/Items?ArtistIds=" + HttpClient::urlEncode(id)
@@ -333,6 +345,7 @@ std::optional<HostedServer::FolderContents> JellyfinServer::folder(const std::st
             out.songs.push_back(songOf(item));
         }
     }
+    sortBySongCount(out.folders, sort);
     return out;
 }
 

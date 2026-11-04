@@ -2,6 +2,8 @@
 
 #include "backend/hosted/jellyfin/jellyfin.h"
 
+#include <algorithm>
+
 bool HostedPath::is(const std::string &path)
 {
     return path.rfind(Prefix, 0) == 0;
@@ -37,7 +39,19 @@ HostedServer::Sort HostedServer::sortFromId(const std::string &id)
     if (id == "artist") return Sort::Artist;
     if (id == "album") return Sort::Album;
     if (id == "year") return Sort::Year;
+    if (id == "mostSongs") return Sort::MostSongs;
+    if (id == "fewestSongs") return Sort::FewestSongs;
     return Sort::Name;
+}
+
+void HostedServer::sortBySongCount(std::vector<HostedCollection> &list, Sort sort)
+{
+    if (sort != Sort::MostSongs && sort != Sort::FewestSongs)
+        return;
+    const bool most = sort == Sort::MostSongs;
+    std::stable_sort(list.begin(), list.end(), [most](const HostedCollection &a, const HostedCollection &b) {
+        return most ? a.songCount > b.songCount : a.songCount < b.songCount;
+    });
 }
 
 std::optional<HostedAccount> HostedServer::signIn(const std::string &kind, const std::string &serverUrl,
