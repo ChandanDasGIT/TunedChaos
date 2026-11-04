@@ -49,6 +49,8 @@ public:
     int doneCount() const { return m_doneCount; }
     int songCount() const { return m_songCount; }
     bool busy() const { return !m_inFlight.isEmpty(); }
+    // Shared with whoever knows loudness too (music servers' gains)
+    std::shared_ptr<LoudnessStore> store() const { return m_store; }
 
 signals:
     void progressChanged();

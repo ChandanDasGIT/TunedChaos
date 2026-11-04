@@ -312,16 +312,17 @@ void PlayerController::updateQuality()
                        {QStringLiteral("filterSize"), Decoder::resamplerInfo().filterSize},
                        {QStringLiteral("cutoff"), Decoder::resamplerInfo().cutoff},
                        {QStringLiteral("bufferMs"), qint64(Player::bufferMs())}};
-            if (!stream) {
+            if (!StreamResolver::isYouTube(path.toStdString())) {
                 // The file's tags, else its measured loudness (the player's order)
-                ReplayGain gain = Metadata::readReplayGain(path.toStdString());
+                const bool hosted = StreamResolver::isHosted(path.toStdString());
+                ReplayGain gain = hosted ? ReplayGain{} : Metadata::readReplayGain(path.toStdString());
                 QString gainSource = QStringLiteral("tags");
                 if (!gain.hasTrack && !gain.hasAlbum) {
                     gainSource = QStringLiteral("pending");
                     if (loudness) {
                         if (const auto measured = loudness->replayGain(path.toStdString())) {
                             gain = *measured;
-                            gainSource = QStringLiteral("measured");
+                            gainSource = hosted ? QStringLiteral("server") : QStringLiteral("measured");
                         } else if (loudness->kind(path.toStdString()) == LoudnessStore::Kind::Failed) {
                             gainSource = QStringLiteral("failed");
                         }

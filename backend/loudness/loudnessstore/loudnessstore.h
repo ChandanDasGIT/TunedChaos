@@ -12,14 +12,15 @@
 #include <utility>
 #include <vector>
 
-// Disk cache of measured loudness for local files that have no ReplayGain
-// tags (tab-separated text). Files that do have tags are only noted, so they
-// aren't read again. An entry is ignored once its file changes (size /
-// modification time). Thread-safe: the player reads it while the scanner writes.
+// Disk cache (tab-separated text) of measured loudness for local files that
+// have no ReplayGain tags, and of the gains music servers give for their songs
+// (Kind::Server). Files that do have tags are only noted, so they aren't read
+// again. A file's entry is ignored once the file changes (size / modification
+// time). Thread-safe: the player reads it while the scanner writes.
 class LoudnessStore
 {
 public:
-    enum class Kind { Unknown, Tagged, Measured, Failed };
+    enum class Kind { Unknown, Tagged, Measured, Failed, Server };
 
     explicit LoudnessStore(std::filesystem::path file);
 
@@ -34,6 +35,8 @@ public:
     void putTagged(const std::string &path);
     void putMeasured(const std::string &path, const Loudness &loudness);
     void putFailed(const std::string &path); // unreadable or silent: not tried again
+    // A music server's song (not a file here): the gain the server measured.
+    void putServerGain(const std::string &path, double gainDb);
 
     // Gives every song of one album its album values, once all of them are
     // measured (false otherwise). songs: path and length.

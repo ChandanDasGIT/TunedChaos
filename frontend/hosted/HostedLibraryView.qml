@@ -184,6 +184,28 @@ Item {
             onTabPicked: (index) => root.tab = index
         }
 
+        // Search: filters the tab's list as you type (not in Folders)
+        FormField {
+            Layout.leftMargin: Theme.padding
+            Layout.rightMargin: Theme.padding
+            Layout.bottomMargin: Theme.spacing
+            visible: !root.inFolders && !HostedController.detailOpen
+            placeholderText: qsTr("Search your server")
+            text: HostedController.search
+            leftPadding: 36
+            inputMethodHints: Qt.ImhNoPredictiveText
+            onTextEdited: HostedController.search = text
+
+            Icon {
+                anchors.left: parent.left
+                anchors.leftMargin: 14
+                anchors.verticalCenter: parent.verticalCenter
+                name: "search"
+                size: 12
+                color: Theme.textMuted
+            }
+        }
+
         Label {
             Layout.fillWidth: true
             Layout.leftMargin: Theme.padding

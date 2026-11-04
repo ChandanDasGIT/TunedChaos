@@ -97,7 +97,9 @@ Popup {
                                          : s.gainSource === "pending" ? qsTr("Not measured yet")
                                          : s.gainSource === "failed" ? qsTr("Couldn't be measured")
                                          : qsTr("Plays as it is")],
-                     [qsTr("From"), s.stream ? qsTr("YouTube songs aren't levelled")
+                     [qsTr("From"), s.gainSource === "server" ? qsTr("Measured by your server")
+                                  : s.stream && s.gainSource === "pending" ? qsTr("Your server hasn't measured it")
+                                  : s.stream ? qsTr("YouTube songs aren't levelled")
                                   : s.gainSource === "measured" ? qsTr("Measured by the app")
                                   : s.gainSource === "tags" ? qsTr("The file's tags")
                                   : qsTr("Nothing yet")]] },

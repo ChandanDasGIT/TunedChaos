@@ -3,6 +3,7 @@
 #include "backend/hosted/hostedserver/hostedserver.h"
 #include "backend/hosted/hostedstore/hostedstore.h"
 #include "backend/library/letterindex/letterindex.h"
+#include "backend/loudness/loudnessstore/loudnessstore.h"
 #include "backend/library/track/track.h"
 #include "wrapper/files/files.h"
 #include "wrapper/player/playercontroller.h"
@@ -117,6 +118,11 @@ void HostedController::useAccount()
     for (bool &loaded : m_loaded)
         loaded = false;
     m_songTracks.clear();
+    m_songTracksAll.clear();
+    m_albumsAll.clear();
+    m_artistsAll.clear();
+    m_genresAll.clear();
+    m_playlistsAll.clear();
     m_detailTracks.clear();
     m_songs.clear();
     m_albums.clear();
@@ -146,6 +152,8 @@ void HostedController::useAccount()
     t.track = song.track;
     t.durationMs = song.durationMs;
     t.thumbnailUrl = m_store->coverUrl(m_accountId.toStdString(), song.coverId, CoverSize);
+    if (song.hasGain && m_loudness)
+        m_loudness->putServerGain(t.path, song.gainDb); // ReplayGain for it
     return t;
 }
 
@@ -231,11 +239,10 @@ void HostedController::load(int tab)
                          return;
                      }
                      setError({});
-                     m_songTracks.clear();
+                     m_songTracksAll.clear();
                      for (const HostedSong &song : *result.first)
-                         m_songTracks.push_back(trackOf(song));
-                     m_songs = toSongList(m_songTracks);
-                     emit listsChanged();
+                         m_songTracksAll.push_back(trackOf(song));
+                     applySearch();
                  });
         return;
     }
@@ -268,8 +275,8 @@ void HostedController::load(int tab)
                          {QStringLiteral("thumbnail"),
                           qs(m_store->coverUrl(m_accountId.toStdString(), c.coverId, CoverSize))}});
                  }
-                 listOf(tab) = list;
-                 emit listsChanged();
+                 fullListOf(tab) = list;
+                 applySearch();
              });
 }
 
@@ -485,4 +492,54 @@ QVariantMap HostedController::letterStarts(int tab) const
             starts.insert(letter, i);
     }
     return starts;
+}
+
+QVariantList &HostedController::fullListOf(int tab)
+{
+    switch (tab) {
+    case AlbumsTab: return m_albumsAll;
+    case ArtistsTab: return m_artistsAll;
+    case GenresTab: return m_genresAll;
+    default: return m_playlistsAll;
+    }
+}
+
+void HostedController::setSearch(const QString &search)
+{
+    if (search == m_search)
+        return;
+    m_search = search;
+    emit searchChanged();
+    applySearch();
+}
+
+// The shown lists: the full ones, filtered by the search (each word in any of the texts)
+void HostedController::applySearch()
+{
+    const QStringList words = m_search.simplified().split(QLatin1Char(' '), Qt::SkipEmptyParts);
+    const auto matches = [&words](const QString &text) {
+        for (const QString &word : words)
+            if (!text.contains(word, Qt::CaseInsensitive))
+                return false;
+        return true;
+    };
+
+    m_songTracks.clear();
+    for (const ::Track &t : m_songTracksAll)
+        if (words.isEmpty() || matches(qs(t.title + ' ' + t.artist + ' ' + t.album)))
+            m_songTracks.push_back(t);
+    m_songs = toSongList(m_songTracks);
+
+    for (const int tab : {AlbumsTab, ArtistsTab, GenresTab, PlaylistsTab}) {
+        const QVariantList &all = fullListOf(tab);
+        QVariantList &shown = listOf(tab);
+        shown.clear();
+        for (const QVariant &entry : all) {
+            const QVariantMap map = entry.toMap();
+            if (words.isEmpty() || matches(map.value(QStringLiteral("name")).toString() + QLatin1Char(' ')
+                                           + map.value(QStringLiteral("subtitle")).toString()))
+                shown.append(entry);
+        }
+    }
+    emit listsChanged();
 }

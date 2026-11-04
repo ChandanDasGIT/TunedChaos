@@ -167,6 +167,7 @@ int main(int argc, char *argv[])
     HostedController hosted(&player, &playlist, &settings, nullptr);
     // Measures library songs without ReplayGain tags (while ReplayGain is on)
     LoudnessController loudness(&player, &playlist, &localLibrary, &settings, nullptr);
+    hosted.setLoudnessStore(loudness.store()); // servers' gains, for ReplayGain
     // Reopen the last song, paused where it was (Settings > General).
     HistoryController history(&player, &playlist, &playlists, &localLibrary, &settings, nullptr);
     SmartPlaylistsController smartPlaylists(&history, &localLibrary, &playlist, nullptr);

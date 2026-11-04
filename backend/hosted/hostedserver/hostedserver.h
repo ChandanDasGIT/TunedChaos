@@ -37,6 +37,8 @@ struct HostedSong
     int disc = 0;
     int track = 0;
     int64_t durationMs = 0;
+    bool hasGain = false; // the server measured its loudness:
+    double gainDb = 0;    // ReplayGain-style gain (to -18 LUFS)
 };
 
 // An album, artist, genre, playlist or folder: something with songs in it.

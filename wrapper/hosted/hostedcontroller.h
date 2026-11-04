@@ -11,6 +11,7 @@
 #include <vector>
 
 class HostedStore;
+class LoudnessStore;
 class PlayerController;
 class PlaylistController;
 class SettingsController;
@@ -33,6 +34,8 @@ class HostedController : public QObject
     Q_PROPERTY(QString serverName READ serverName NOTIFY accountChanged)
     Q_PROPERTY(QString userName READ userName NOTIFY accountChanged)
     Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
+    // Filters the Songs, Albums, Artists, Genres and Playlists tabs (every word must match)
+    Q_PROPERTY(QString search READ search WRITE setSearch NOTIFY searchChanged)
     Q_PROPERTY(QString error READ error NOTIFY errorChanged)
     // Songs: [{ path, title, artist, album, durationMs, thumbnail }]
     // Albums / artists / playlists: [{ id, name, subtitle, count, thumbnail }]
@@ -67,12 +70,16 @@ public:
     ~HostedController() override;
 
     static HostedController *create(QQmlEngine *qmlEngine, QJSEngine *jsEngine);
+    // Where the gains servers measure go (ReplayGain for their songs)
+    void setLoudnessStore(std::shared_ptr<LoudnessStore> store) { m_loudness = std::move(store); }
 
     bool signedIn() const { return !m_accountId.isEmpty(); }
     QString serverName() const { return m_serverName; }
     QString userName() const { return m_userName; }
     bool busy() const { return m_busy > 0; }
     QString error() const { return m_error; }
+    QString search() const { return m_search; }
+    void setSearch(const QString &search);
     QVariantList songs() const { return m_songs; }
     QVariantList albums() const { return m_albums; }
     QVariantList artists() const { return m_artists; }
@@ -107,6 +114,7 @@ public:
 
 signals:
     void accountChanged();
+    void searchChanged();
     void busyChanged();
     void errorChanged();
     void listsChanged();
@@ -131,6 +139,7 @@ private:
     PlaylistController *m_playlist;
     SettingsController *m_settings;
     std::shared_ptr<HostedStore> m_store;
+    std::shared_ptr<LoudnessStore> m_loudness;
 
     QString m_accountId, m_serverName, m_userName;
     int m_busy = 0;
@@ -141,7 +150,12 @@ private:
     QVariantList m_folderCrumbs, m_folderEntries;
     int m_folderRequest = 0; // the folder asked for last (older answers are dropped)
     QVariantList m_songs, m_albums, m_artists, m_genres, m_playlists, m_detailSongs;
-    QVariantList &listOf(int tab); // a tab's list of albums / artists / genres / playlists
+    QVariantList &listOf(int tab); // a tab's list of albums / artists / genres / playlists (shown)
+    QVariantList &fullListOf(int tab); // the same, before the search
+    void applySearch();
+    QString m_search;
+    std::vector<::Track> m_songTracksAll;
+    QVariantList m_albumsAll, m_artistsAll, m_genresAll, m_playlistsAll;
     QString m_detailTitle, m_detailThumbnail;
     QThreadPool m_pool;
 };

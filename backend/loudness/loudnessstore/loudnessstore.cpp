@@ -2,6 +2,7 @@
 
 #include "backend/storage/tsv/tsv.h"
 
+#include <algorithm>
 #include <fstream>
 #include <locale>
 #include <sstream>
@@ -34,6 +35,7 @@ char kindCode(LoudnessStore::Kind kind)
     case LoudnessStore::Kind::Tagged: return 't';
     case LoudnessStore::Kind::Measured: return 'm';
     case LoudnessStore::Kind::Failed: return 'f';
+    case LoudnessStore::Kind::Server: return 's';
     case LoudnessStore::Kind::Unknown: break;
     }
     return '?';
@@ -47,6 +49,8 @@ LoudnessStore::Kind kindFromCode(const std::string &code)
         return LoudnessStore::Kind::Measured;
     if (code == "f")
         return LoudnessStore::Kind::Failed;
+    if (code == "s")
+        return LoudnessStore::Kind::Server;
     return LoudnessStore::Kind::Unknown;
 }
 
@@ -133,6 +137,8 @@ const LoudnessStore::Entry *LoudnessStore::findLocked(const std::string &path) c
     const auto it = m_entries.find(path);
     if (it == m_entries.end())
         return nullptr;
+    if (it->second.kind == Kind::Server)
+        return &it->second; // not a file: nothing to check
     int64_t size = 0, time = 0;
     if (!fileStamp(path, size, time) || size != it->second.fileSize || time != it->second.fileTime)
         return nullptr; // the file changed since
@@ -165,6 +171,17 @@ void LoudnessStore::putFailed(const std::string &path)
     Entry entry;
     entry.kind = Kind::Failed;
     put(path, entry);
+}
+
+void LoudnessStore::putServerGain(const std::string &path, double gainDb)
+{
+    // The server says nothing about peaks: turning up stays modest (clipping)
+    constexpr double MaxBoostDb = 6.0;
+    Entry entry;
+    entry.kind = Kind::Server;
+    entry.track.lufs = LoudnessMeter::ReferenceLufs - std::min(gainDb, MaxBoostDb);
+    std::lock_guard lock(m_mutex);
+    m_entries[path] = entry;
 }
 
 void LoudnessStore::putMeasured(const std::string &path, const Loudness &loudness)
@@ -203,7 +220,7 @@ std::optional<ReplayGain> LoudnessStore::replayGain(const std::string &path) con
 {
     std::lock_guard lock(m_mutex);
     const Entry *entry = findLocked(path);
-    if (!entry || entry->kind != Kind::Measured)
+    if (!entry || (entry->kind != Kind::Measured && entry->kind != Kind::Server))
         return std::nullopt;
     ReplayGain gain;
     gain.hasTrack = true;

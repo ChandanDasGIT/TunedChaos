@@ -283,8 +283,8 @@ bool Player::openPath(Decoder &decoder, const std::string &path)
 {
     if (&decoder == m_decoder.get()) {
         m_decodedFrames = 0;
-        // (YouTube and server songs have no tags to read here, and aren't measured.)
-        m_decodingGain = StreamResolver::isRemote(path) ? ReplayGain{} : replayGainFor(path);
+        // (YouTube songs have no tags and aren't measured; servers may give theirs: the store has it.)
+        m_decodingGain = StreamResolver::isYouTube(path) ? ReplayGain{} : replayGainFor(path);
         m_decodingPath = path;
         m_gainFactor = float(replayGainFactor()); // a new file starts at its own level
         m_gainRampLeft = 0;
@@ -402,7 +402,7 @@ void Player::setLoudnessStore(std::shared_ptr<const LoudnessStore> store)
 
 ReplayGain Player::replayGainFor(const std::string &path)
 {
-    const ReplayGain tags = Metadata::readReplayGain(path);
+    const ReplayGain tags = StreamResolver::isHosted(path) ? ReplayGain{} : Metadata::readReplayGain(path);
     if (tags.hasTrack || tags.hasAlbum)
         return tags;
     std::shared_ptr<const LoudnessStore> store;

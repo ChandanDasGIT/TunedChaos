@@ -97,6 +97,11 @@ HostedSong songOf(const json &item)
     song.disc = int(number(item, "ParentIndexNumber"));
     song.track = int(number(item, "IndexNumber"));
     song.durationMs = number(item, "RunTimeTicks") / 10000; // ticks of 100 ns
+    // Jellyfin 10.9+ measures loudness itself (to -18 LUFS, like ReplayGain)
+    if (const auto gain = item.find("NormalizationGain"); gain != item.end() && gain->is_number()) {
+        song.hasGain = true;
+        song.gainDb = gain->get<double>();
+    }
     return song;
 }
 

@@ -895,6 +895,26 @@ Rectangle {
                         }
 
                         SettingsCard {
+                            title: qsTr("Hosted library")
+
+                            SettingsRow {
+                                Layout.fillWidth: true
+                                title: HostedController.signedIn ? HostedController.serverName : qsTr("No server")
+                                description: HostedController.signedIn
+                                             ? qsTr("Signed in as %1 (Jellyfin). Its songs are in Library > Hosted library.")
+                                               .arg(HostedController.userName)
+                                             : qsTr("Sign in to a Jellyfin server from Library > Hosted library.")
+
+                                PillButton {
+                                    visible: HostedController.signedIn
+                                    text: qsTr("Sign out")
+                                    implicitHeight: 32
+                                    onClicked: HostedController.signOut()
+                                }
+                            }
+                        }
+
+                        SettingsCard {
                             title: qsTr("Music folders")
 
                             SettingsRow {
