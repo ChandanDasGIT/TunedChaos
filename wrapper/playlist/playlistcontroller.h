@@ -120,6 +120,9 @@ public:
     void playTitled(std::vector<::Track> tracks, int startIndex, const QString &title, bool endless);
     // More songs for the endless list playing (those already in it are skipped).
     void extendList(const std::vector<::Track> &tracks);
+    // The moreWanted request failed (offline, YouTube trouble): asked again a few
+    // times, a little later.
+    void moreFailed();
     // A Mix to go on with once the Queue ends (the answer to moreWanted(.., true)).
     void setFollowUp(std::vector<::Track> tracks, const QString &title);
     // Resuming the last session: the song is loaded paused at `positionMs`.
@@ -192,6 +195,7 @@ private:
     QString m_contextTitle;      // shown as "Playing from" ("" for named playlists)
     bool m_contextEndless = false; // a Mix: topped up from YouTube
     bool m_moreRequested = false;  // moreWanted sent, no answer yet (or nothing new came)
+    int m_moreFailures = 0;        // failed answers in a row
     bool m_waitingForMore = false; // the music ran out before the answer came
     std::vector<::Track> m_followUp; // the Mix after the Queue's last song
     QString m_followUpTitle;

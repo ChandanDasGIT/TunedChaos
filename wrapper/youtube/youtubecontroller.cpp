@@ -366,6 +366,7 @@ void YouTubeController::fetchMore(const QString &seedPath, bool forQueue)
              [this, videoId, seedTitle, forQueue](const std::optional<std::vector<YtSong>> &songs) {
                  if (!songs) {
                      emit notice(errorText("up next"));
+                     m_playlist->moreFailed(); // tried again a little later
                      return;
                  }
                  std::vector<::Track> tracks;

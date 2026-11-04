@@ -13,8 +13,12 @@ import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.wifi.WifiManager;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
+import android.os.PowerManager;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
@@ -49,6 +53,15 @@ public class MediaPlaybackService extends Service {
     private MediaSessionCompat m_session;
     private boolean m_foreground = false;
 
+    // With the screen off, Android may put the CPU and Wi-Fi to sleep. While
+    // music plays, and for a while after it stops (the next YouTube song or
+    // more of a Mix is being fetched), both are kept awake.
+    private static final long AWAKE_AFTER_STOP_MS = 60_000;
+    private PowerManager.WakeLock m_wakeLock;
+    private WifiManager.WifiLock m_wifiLock;
+    private final Handler m_handler = new Handler(Looper.getMainLooper());
+    private final Runnable m_releaseLocks = this::releaseLocks;
+
     // A button was pressed (handled in C++)
     private static native void nativeAction(int action);
     // The notification's seek bar was dragged (handled in C++)
@@ -68,8 +81,10 @@ public class MediaPlaybackService extends Service {
         }
         Intent intent = new Intent(context, MediaPlaybackService.class);
         if (hasTrack) {
-            if (s_service != null)
+            if (s_service != null) {
+                s_service.keepAwake(playing);
                 s_service.refresh();
+            }
             else
                 ContextCompat.startForegroundService(context, intent);
         } else if (s_service != null) {
@@ -114,6 +129,36 @@ public class MediaPlaybackService extends Service {
             @Override public void onSeekTo(long positionMs) { nativeSeek(positionMs); }
         });
         m_session.setActive(true);
+
+        m_wakeLock = getSystemService(PowerManager.class)
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TunedChaos:playback");
+        m_wakeLock.setReferenceCounted(false);
+        WifiManager wifi = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        if (wifi != null) {
+            m_wifiLock = wifi.createWifiLock(Build.VERSION.SDK_INT >= 29 ? WifiManager.WIFI_MODE_FULL_LOW_LATENCY
+                                                                          : WifiManager.WIFI_MODE_FULL_HIGH_PERF,
+                                             "TunedChaos:playback");
+            m_wifiLock.setReferenceCounted(false);
+        }
+    }
+
+    // Playing: awake. Not playing: awake for AWAKE_AFTER_STOP_MS more. (Any thread.)
+    private synchronized void keepAwake(boolean playing) {
+        m_handler.removeCallbacks(m_releaseLocks);
+        if (!m_wakeLock.isHeld())
+            m_wakeLock.acquire();
+        if (m_wifiLock != null && !m_wifiLock.isHeld())
+            m_wifiLock.acquire();
+        if (!playing)
+            m_handler.postDelayed(m_releaseLocks, AWAKE_AFTER_STOP_MS);
+    }
+
+    private synchronized void releaseLocks() {
+        m_handler.removeCallbacks(m_releaseLocks);
+        if (m_wakeLock.isHeld())
+            m_wakeLock.release();
+        if (m_wifiLock != null && m_wifiLock.isHeld())
+            m_wifiLock.release();
     }
 
     @Override
@@ -123,6 +168,11 @@ public class MediaPlaybackService extends Service {
         // Only once: a button's result reaches the notification through update().
         // Building it here too would show the old position over the new one.
         if (!m_foreground) {
+            boolean playing;
+            synchronized (MediaPlaybackService.class) {
+                playing = s_playing;
+            }
+            keepAwake(playing);
             ServiceCompat.startForeground(this, NOTIFICATION, buildNotification(),
                 Build.VERSION.SDK_INT >= 29 ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK : 0);
             m_foreground = true;
@@ -133,6 +183,7 @@ public class MediaPlaybackService extends Service {
     @Override
     public void onDestroy() {
         s_service = null;
+        releaseLocks();
         m_session.setActive(false);
         m_session.release();
         super.onDestroy();

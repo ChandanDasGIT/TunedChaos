@@ -7,6 +7,7 @@
 #include "wrapper/settings/settingscontroller.h"
 
 #include <QJSEngine>
+#include <QTimer>
 
 #include <algorithm>
 #include <QStandardPaths>
@@ -234,6 +235,7 @@ void PlaylistController::extendList(const std::vector<::Track> &tracks)
             ++added;
         }
     }
+    m_moreFailures = 0;
     if (added == 0)
         return; // nothing new: don't keep asking
     m_moreRequested = false;
@@ -247,8 +249,28 @@ void PlaylistController::extendList(const std::vector<::Track> &tracks)
     }
 }
 
+void PlaylistController::moreFailed()
+{
+    m_moreRequested = false;
+    constexpr int MaxRetries = 3;
+    constexpr int RetryMs = 10000;
+    if (++m_moreFailures > MaxRetries) {
+        m_moreFailures = 0;
+        m_waitingForMore = false; // give up for now: the next song played asks again
+        return;
+    }
+    QTimer::singleShot(RetryMs, this, [this] {
+        if (m_moreRequested)
+            return; // asked meanwhile
+        checkRunningOut();
+        if (m_waitingForMore && !m_moreRequested)
+            m_waitingForMore = false; // nothing to ask for any more (the list changed)
+    });
+}
+
 void PlaylistController::setFollowUp(std::vector<::Track> tracks, const QString &title)
 {
+    m_moreFailures = 0;
     if (m_active != &m_playlist || tracks.empty())
         return;
     m_followUp = std::move(tracks);
