@@ -25,8 +25,11 @@ QtObject {
     readonly property color accent:     isDark ? "#9b8cff" : "#6a55e0"
     readonly property color accentSoft: withAlpha(accent, 0.2)
     readonly property color text:       isDark ? "#ececf2" : "#1b1b22"
-    readonly property color textMuted:  isDark ? "#8b8b9e" : "#5f5f72"
-    readonly property color textDim:    isDark ? "#5c5c6e" : "#9a9aab"
+    // Phones: stronger greys, easier to read over the cover-tinted background
+    readonly property color textMuted:  touchOnly ? (isDark ? "#a6a6b8" : "#4c4c5e")
+                                                  : (isDark ? "#8b8b9e" : "#5f5f72")
+    readonly property color textDim:    touchOnly ? (isDark ? "#6e6e82" : "#8a8a9c")
+                                                  : (isDark ? "#5c5c6e" : "#9a9aab")
     readonly property color error:      isDark ? "#f06a6a" : "#d64545"
 
     // Glazes for fields, chips, headers and buttons (weakest to strongest)
@@ -53,11 +56,11 @@ QtObject {
         return Qt.rgba(c.r, c.g, c.b, alpha)
     }
 
-    // Typography
-    readonly property int fontSizeSmall: 11
-    readonly property int fontSize:      13
-    readonly property int fontSizeLarge: 16
-    readonly property int fontSizeTitle: 21
+    // Typography (phones: a step bigger, easier to read at arm's length)
+    readonly property int fontSizeSmall: touchOnly ? 12 : 11
+    readonly property int fontSize:      touchOnly ? 14 : 13
+    readonly property int fontSizeLarge: touchOnly ? 17 : 16
+    readonly property int fontSizeTitle: touchOnly ? 23 : 21
 
     // Metrics
     readonly property int spacing:      8

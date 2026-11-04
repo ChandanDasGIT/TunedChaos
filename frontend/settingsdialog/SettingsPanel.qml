@@ -641,31 +641,68 @@ Rectangle {
                                 }
                             }
 
-                            Flow {
-                                Layout.fillWidth: true
-                                spacing: 6
+                            // The presets in rows of their own widths, each row centred
+                            Column {
+                                id: presetRows
 
-                                Repeater {
-                                    model: eqPage.presets
-
-                                    delegate: PillButton {
-                                        required property var modelData
-
-                                        text: modelData.name
-                                        implicitHeight: 32
-                                        active: SettingsController.eqPreset === modelData.id
-                                        onClicked: {
-                                            SettingsController.setEqPreset(modelData.id, modelData.gains)
-                                            SettingsController.eqEnabled = true
+                                readonly property var items: eqPage.presets.concat(
+                                    SettingsController.eqPreset === "custom" ? [{ id: "custom", name: qsTr("Custom") }] : [])
+                                readonly property real gap: 6
+                                // Fills each row with as many pills as fit (a pill: its name + 32 px)
+                                readonly property var rows: {
+                                    const out = []
+                                    let row = [], used = 0
+                                    for (const item of items) {
+                                        const w = presetMetrics.advanceWidth(item.name) + 32
+                                        if (row.length > 0 && used + gap + w > width) {
+                                            out.push(row)
+                                            row = []
+                                            used = 0
                                         }
+                                        used += (row.length > 0 ? gap : 0) + w
+                                        row.push(item)
                                     }
+                                    if (row.length > 0)
+                                        out.push(row)
+                                    return out
                                 }
 
-                                PillButton {
-                                    visible: SettingsController.eqPreset === "custom"
-                                    text: qsTr("Custom")
-                                    implicitHeight: 32
-                                    active: true
+                                Layout.fillWidth: true
+                                spacing: gap
+
+                                FontMetrics {
+                                    id: presetMetrics
+                                    font.pixelSize: Theme.fontSize
+                                    font.weight: Font.DemiBold
+                                }
+
+                                Repeater {
+                                    model: presetRows.rows
+
+                                    delegate: Row {
+                                        required property var modelData
+
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        spacing: presetRows.gap
+
+                                        Repeater {
+                                            model: parent.modelData
+
+                                            delegate: PillButton {
+                                                required property var modelData
+
+                                                text: modelData.name
+                                                implicitHeight: 32
+                                                active: SettingsController.eqPreset === modelData.id
+                                                onClicked: {
+                                                    if (!modelData.gains)
+                                                        return // "Custom": what the sliders are set to
+                                                    SettingsController.setEqPreset(modelData.id, modelData.gains)
+                                                    SettingsController.eqEnabled = true
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
 
@@ -695,24 +732,24 @@ Rectangle {
                                 }
                             }
 
-                            RowLayout {
+                            // The hint, then Reset, both centred under the sliders
+                            Label {
                                 Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignHCenter
+                                text: root.android ? qsTr("Hz · ±12 dB. Double-tap a slider to set it back to 0.")
+                                                   : qsTr("Hz · ±12 dB. Double-click a slider to set it back to 0.")
+                                color: Theme.textMuted
+                                font.pixelSize: Theme.fontSizeSmall
+                                wrapMode: Text.WordWrap
+                            }
 
-                                Label {
-                                    Layout.fillWidth: true
-                                    text: qsTr("Hz · ±12 dB. Double-click a slider to set it back to 0.")
-                                    color: Theme.textMuted
-                                    font.pixelSize: Theme.fontSizeSmall
-                                    wrapMode: Text.WordWrap
-                                }
-
-                                PillButton {
-                                    iconName: "refresh"
-                                    iconSize: 11
-                                    text: qsTr("Reset")
-                                    implicitHeight: 32
-                                    onClicked: SettingsController.setEqPreset("flat", [0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-                                }
+                            PillButton {
+                                Layout.alignment: Qt.AlignHCenter
+                                iconName: "refresh"
+                                iconSize: 11
+                                text: qsTr("Reset")
+                                implicitHeight: 32
+                                onClicked: SettingsController.setEqPreset("flat", [0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
                             }
                         }
                     }
@@ -727,7 +764,8 @@ Rectangle {
                             SettingsRow {
                                 Layout.fillWidth: true
                                 title: qsTr("Colors")
-                                description: qsTr("System follows your desktop's light or dark setting.")
+                                description: root.android ? qsTr("System follows your phone's light or dark setting.")
+                                                          : qsTr("System follows your desktop's light or dark setting.")
                             }
 
                             Flow {
