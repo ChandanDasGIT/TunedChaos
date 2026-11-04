@@ -12,6 +12,7 @@ Rectangle {
     property string subtitle
     property real duration: -1 // ms; -1: not a song
     property bool playing: false
+    property string icon: isSong ? "music" : "compactDisc" // shown without a picture
 
     signal tapped()
     signal queueRequested()
@@ -42,7 +43,7 @@ Rectangle {
 
             Icon {
                 anchors.centerIn: parent
-                name: root.isSong ? "music" : "compactDisc"
+                name: root.icon
                 size: 14
                 color: Theme.textDim
             }

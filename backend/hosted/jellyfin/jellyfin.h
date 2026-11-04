@@ -16,6 +16,7 @@ public:
     std::optional<std::vector<HostedSong>> songs(Sort sort) override;
     std::optional<std::vector<HostedCollection>> collections(Kind kind, Sort sort) override;
     std::optional<std::vector<HostedSong>> songsOf(Kind kind, const std::string &id) override;
+    std::optional<FolderContents> folder(const std::string &id, Sort sort) override;
 
     std::string streamUrl(const std::string &songId) const override;
     std::string coverUrl(const std::string &itemId, int size) const override;

@@ -57,8 +57,8 @@ Rectangle {
     function back() {
         if (letterGrid.visible)
             letterGrid.visible = false
-        else if (source === "hosted" && HostedController.detailOpen)
-            HostedController.closeDetail()
+        else if (source === "hosted" && hostedView.back())
+            return true // out of an album / artist / playlist, or up one folder
         else if (inDetail)
             LocalLibraryController.closeDetail()
         else if (source === "local" && tab === 4 && hasFolders && LocalLibraryController.folder !== "")
@@ -263,6 +263,7 @@ Rectangle {
 
         // ---- Hosted library (a music server)
         HostedLibraryView {
+            id: hostedView
             Layout.fillWidth: true
             Layout.fillHeight: true
             visible: root.source === "hosted"

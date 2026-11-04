@@ -39,7 +39,7 @@ struct HostedSong
     int64_t durationMs = 0;
 };
 
-// An album, artist or playlist: something with songs in it.
+// An album, artist, playlist or folder: something with songs in it.
 struct HostedCollection
 {
     std::string id;
@@ -65,7 +65,7 @@ std::string songId(const std::string &path);
 class HostedServer
 {
 public:
-    enum class Kind { Albums, Artists, Playlists };
+    enum class Kind { Albums, Artists, Playlists, Folders };
     // How a list comes back (a kind of server may ignore what it can't do)
     enum class Sort { Name, NameDesc, Newest, Oldest, Artist, Album, Year };
     static Sort sortFromId(const std::string &id); // "name", "nameDesc", "newest"... (unknown: Name)
@@ -83,7 +83,17 @@ public:
     // Blocking (call from worker threads). Nothing on failure: lastError() says why.
     virtual std::optional<std::vector<HostedSong>> songs(Sort sort) = 0;
     virtual std::optional<std::vector<HostedCollection>> collections(Kind kind, Sort sort) = 0;
+    // Folders: songsOf(Kind::Folders, id) is every song under it, subfolders too.
     virtual std::optional<std::vector<HostedSong>> songsOf(Kind kind, const std::string &id) = 0;
+
+    // The folders as stored on the server. id "": the music libraries (the top
+    // folders). Otherwise what's right in that folder: its folders, its songs.
+    struct FolderContents
+    {
+        std::vector<HostedCollection> folders;
+        std::vector<HostedSong> songs;
+    };
+    virtual std::optional<FolderContents> folder(const std::string &id, Sort sort) = 0;
 
     // Addresses (no network): the song's audio as stored, a picture at about `size` pixels.
     virtual std::string streamUrl(const std::string &songId) const = 0;

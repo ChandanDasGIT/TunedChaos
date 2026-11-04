@@ -930,14 +930,14 @@ void SettingsController::setLibrarySource(const QString &source)
 QStringList SettingsController::hostedSorts() const
 {
     QStringList sorts;
-    for (int tab = 0; tab < 4; ++tab)
+    for (int tab = 0; tab < 5; ++tab)
         sorts << QString::fromStdString(m_settings->value(std::string(HostedSortKey) + '.' + std::to_string(tab), "name"));
     return sorts;
 }
 
 void SettingsController::setHostedSort(int tab, const QString &sort)
 {
-    if (tab < 0 || tab > 3 || hostedSorts().value(tab) == sort)
+    if (tab < 0 || tab > 4 || hostedSorts().value(tab) == sort)
         return;
     m_settings->setValue(std::string(HostedSortKey) + '.' + std::to_string(tab), sort.toStdString());
     scheduleSave();

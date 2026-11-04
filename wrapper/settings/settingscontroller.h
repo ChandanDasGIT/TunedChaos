@@ -106,7 +106,7 @@ class SettingsController : public QObject
     Q_PROPERTY(QString librarySort READ librarySort WRITE setLibrarySort NOTIFY librarySortChanged)
     // The library picked last in Library: "local", "hosted" ("" = none yet: the choice shows)
     Q_PROPERTY(QString librarySource READ librarySource WRITE setLibrarySource NOTIFY librarySourceChanged)
-    // Hosted library: how each tab is sorted (songs, albums, artists, playlists)
+    // Hosted library: how each tab is sorted (songs, albums, artists, playlists, folders)
     Q_PROPERTY(QStringList hostedSorts READ hostedSorts NOTIFY hostedSortsChanged)
     // Library lists sorted by name get letter headers (# A..Z), tap one to jump to a letter
     Q_PROPERTY(bool letterGroups READ letterGroups WRITE setLetterGroups NOTIFY letterGroupsChanged)

@@ -42,7 +42,7 @@ HostedController::HostedController(PlayerController *player, PlaylistController 
 
     // A tab sorted differently: loaded again (the server sorts), shown ones at once
     connect(m_settings, &SettingsController::hostedSortsChanged, this, [this] {
-        for (int tab = SongsTab; tab <= PlaylistsTab; ++tab)
+        for (int tab = SongsTab; tab <= FoldersTab; ++tab)
             if (m_loaded[tab])
                 refresh(tab);
     });
@@ -106,7 +106,11 @@ void HostedController::useAccount()
     m_detailSongs.clear();
     m_detailTitle.clear();
     m_detailThumbnail.clear();
+    m_folderTracks.clear();
+    m_folderCrumbs.clear();
+    m_folderEntries.clear();
     emit accountChanged();
+    emit folderChanged();
     emit listsChanged();
     emit detailChanged();
 }
@@ -173,7 +177,7 @@ void HostedController::signOut()
 
 void HostedController::refresh(int tab)
 {
-    if (tab < SongsTab || tab > PlaylistsTab)
+    if (tab < SongsTab || tab > FoldersTab)
         return;
     m_loaded[tab] = false;
     load(tab);
@@ -181,9 +185,13 @@ void HostedController::refresh(int tab)
 
 void HostedController::load(int tab)
 {
-    if (!signedIn() || tab < SongsTab || tab > PlaylistsTab || m_loaded[tab])
+    if (!signedIn() || tab < SongsTab || tab > FoldersTab || m_loaded[tab])
         return;
     m_loaded[tab] = true;
+    if (tab == FoldersTab) {
+        loadFolder();
+        return;
+    }
     const std::optional<HostedAccount> account = m_store->account(m_accountId.toStdString());
     if (!account)
         return;
@@ -289,20 +297,135 @@ void HostedController::closeDetail()
     emit detailChanged();
 }
 
-void HostedController::play(bool detail, int index)
+const std::vector<::Track> &HostedController::tracksOf(int list) const
 {
-    const std::vector<::Track> &tracks = detail ? m_detailTracks : m_songTracks;
+    return list == DetailList ? m_detailTracks : list == FolderList ? m_folderTracks : m_songTracks;
+}
+
+void HostedController::play(int list, int index)
+{
+    const std::vector<::Track> &tracks = tracksOf(list);
     if (index < 0 || size_t(index) >= tracks.size())
         return;
-    const QString title = detail ? m_detailTitle : (m_serverName.isEmpty() ? tr("Hosted library") : m_serverName);
+    QString title = m_serverName.isEmpty() ? tr("Hosted library") : m_serverName;
+    if (list == DetailList)
+        title = m_detailTitle;
+    else if (list == FolderList && !m_folderCrumbs.isEmpty())
+        title = m_folderCrumbs.constLast().toMap().value(QStringLiteral("name")).toString();
     m_playlist->playTitled(tracks, index, title, false);
 }
 
-void HostedController::addToQueue(bool detail, int index)
+void HostedController::addToQueue(int list, int index)
 {
-    const std::vector<::Track> &tracks = detail ? m_detailTracks : m_songTracks;
+    const std::vector<::Track> &tracks = tracksOf(list);
     if (index < 0 || size_t(index) >= tracks.size())
         return;
     m_playlist->addAndPlay({tracks[size_t(index)]}, false);
     emit notice(tr("Added to the queue"));
+}
+
+void HostedController::openFolder(const QString &id, const QString &name)
+{
+    m_folderCrumbs.append(QVariantMap{{QStringLiteral("id"), id}, {QStringLiteral("name"), name}});
+    loadFolder();
+}
+
+void HostedController::openCrumb(int index)
+{
+    while (m_folderCrumbs.size() > index + 1)
+        m_folderCrumbs.removeLast();
+    loadFolder();
+}
+
+bool HostedController::folderUp()
+{
+    if (m_folderCrumbs.isEmpty())
+        return false;
+    m_folderCrumbs.removeLast();
+    loadFolder();
+    return true;
+}
+
+void HostedController::loadFolder()
+{
+    const std::optional<HostedAccount> account = m_store->account(m_accountId.toStdString());
+    if (!account)
+        return;
+    const int request = ++m_folderRequest;
+    const std::string id = m_folderCrumbs.isEmpty()
+        ? std::string() : m_folderCrumbs.constLast().toMap().value(QStringLiteral("id")).toString().toStdString();
+    // Shown at once: where it is now; its contents once they come
+    m_folderTracks.clear();
+    m_folderEntries.clear();
+    emit folderChanged();
+
+    const HostedServer::Sort sort = HostedServer::sortFromId(m_settings->hostedSorts().value(FoldersTab).toStdString());
+    runAsync([account = *account, id, sort] {
+                 std::unique_ptr<HostedServer> server = HostedServer::open(account);
+                 auto contents = server ? server->folder(id, sort) : std::nullopt;
+                 return std::make_pair(contents, server ? server->lastError() : std::string("Unknown server"));
+             },
+             [this, request, top = id.empty()](
+                 const std::pair<std::optional<HostedServer::FolderContents>, std::string> &result) {
+                 if (request != m_folderRequest)
+                     return; // another folder was opened meanwhile
+                 if (!result.first) {
+                     m_loaded[FoldersTab] = false;
+                     setError(qs(result.second));
+                     return;
+                 }
+                 setError({});
+                 // Only one music library: straight into it
+                 if (top && result.first->folders.size() == 1 && result.first->songs.empty()) {
+                     const HostedCollection &only = result.first->folders.front();
+                     openFolder(qs(only.id), qs(only.name));
+                     return;
+                 }
+                 QVariantList entries;
+                 for (const HostedCollection &f : result.first->folders)
+                     entries.append(QVariantMap{
+                         {QStringLiteral("kind"), QStringLiteral("folder")},
+                         {QStringLiteral("id"), qs(f.id)},
+                         {QStringLiteral("name"), qs(f.name)},
+                         {QStringLiteral("subtitle"), f.songCount > 0 ? tr("%n item(s)", nullptr, f.songCount) : QString()},
+                         {QStringLiteral("thumbnail"), QString()}});
+                 m_folderTracks.clear();
+                 for (const HostedSong &song : result.first->songs)
+                     m_folderTracks.push_back(trackOf(song));
+                 for (QVariant &song : toSongList(m_folderTracks)) {
+                     QVariantMap map = song.toMap();
+                     map.insert(QStringLiteral("kind"), QStringLiteral("song"));
+                     entries.append(map);
+                 }
+                 m_folderEntries = entries;
+                 emit folderChanged();
+             });
+}
+
+void HostedController::playFolder()
+{
+    const std::optional<HostedAccount> account = m_store->account(m_accountId.toStdString());
+    if (!account || m_folderCrumbs.isEmpty())
+        return;
+    const QVariantMap here = m_folderCrumbs.constLast().toMap();
+    const QString name = here.value(QStringLiteral("name")).toString();
+    runAsync([account = *account, id = here.value(QStringLiteral("id")).toString().toStdString()] {
+                 std::unique_ptr<HostedServer> server = HostedServer::open(account);
+                 auto songs = server ? server->songsOf(HostedServer::Kind::Folders, id) : std::nullopt;
+                 return std::make_pair(songs, server ? server->lastError() : std::string("Unknown server"));
+             },
+             [this, name](const std::pair<std::optional<std::vector<HostedSong>>, std::string> &result) {
+                 if (!result.first) {
+                     setError(qs(result.second));
+                     return;
+                 }
+                 std::vector<::Track> tracks;
+                 for (const HostedSong &song : *result.first)
+                     tracks.push_back(trackOf(song));
+                 if (tracks.empty()) {
+                     emit notice(tr("No songs in “%1”").arg(name));
+                     return;
+                 }
+                 m_playlist->playTitled(std::move(tracks), 0, name, false);
+             });
 }

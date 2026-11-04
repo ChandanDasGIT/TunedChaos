@@ -238,6 +238,10 @@ std::optional<std::vector<HostedCollection>> JellyfinServer::collections(Kind ki
         query = "/Users/" + user + "/Items?IncludeItemTypes=Playlist&Recursive=true"
                 "&Fields=ChildCount&EnableTotalRecordCount=false" + sortQuery(sort, false);
         break;
+    case Kind::Folders: // browsed one at a time: folder()
+        if (auto top = folder({}, sort))
+            return top->folders;
+        return std::nullopt;
     }
     const std::optional<std::string> body = get(query);
     if (!body)
@@ -263,6 +267,9 @@ std::optional<std::vector<HostedSong>> JellyfinServer::songsOf(Kind kind, const 
     if (kind == Kind::Albums)
         query = "/Users/" + user + "/Items?ParentId=" + HttpClient::urlEncode(id)
                 + "&SortBy=ParentIndexNumber,IndexNumber,SortName" + common;
+    else if (kind == Kind::Folders) // everything under it
+        query = "/Users/" + user + "/Items?ParentId=" + HttpClient::urlEncode(id)
+                + "&SortBy=Album,ParentIndexNumber,IndexNumber,SortName" + common;
     else if (kind == Kind::Artists)
         query = "/Users/" + user + "/Items?ArtistIds=" + HttpClient::urlEncode(id)
                 + "&SortBy=Album,ParentIndexNumber,IndexNumber,SortName" + common;
@@ -286,6 +293,46 @@ std::optional<std::vector<HostedSong>> JellyfinServer::songList(const std::strin
     for (const json &item : *items)
         if (item.is_object() && text(item, "Type") != "Folder" && text(item, "MediaType") != "Video")
             out.push_back(songOf(item));
+    return out;
+}
+
+std::optional<HostedServer::FolderContents> JellyfinServer::folder(const std::string &id, Sort sort)
+{
+    const std::string user = HttpClient::urlEncode(m_account.userId);
+    // The top: the user's music libraries. Inside: the folder's own items (not deeper).
+    const std::string query = id.empty()
+        ? "/Users/" + user + "/Views"
+        : "/Users/" + user + "/Items?ParentId=" + HttpClient::urlEncode(id)
+              + "&Fields=ChildCount&EnableTotalRecordCount=false"
+              + (sort == Sort::NameDesc ? "&SortBy=IsFolder,SortName&SortOrder=Descending"
+                                        : "&SortBy=IsFolder,SortName&SortOrder=Ascending");
+    const std::optional<std::string> body = get(query);
+    if (!body)
+        return std::nullopt;
+    const json answer = json::parse(*body, nullptr, false);
+    const json *items = answer.is_discarded() ? nullptr : itemsOf(answer);
+    if (!items) {
+        m_error = "The server's answer couldn't be read";
+        return std::nullopt;
+    }
+    FolderContents out;
+    for (const json &item : *items) {
+        if (!item.is_object())
+            continue;
+        if (id.empty()) { // libraries: only those holding music
+            const std::string type = text(item, "CollectionType");
+            if (type == "music" || type.empty())
+                out.folders.push_back(collectionOf(item, false));
+            continue;
+        }
+        const auto isFolder = item.find("IsFolder");
+        if (isFolder != item.end() && isFolder->is_boolean() && isFolder->get<bool>()) {
+            if (text(item, "Type") != "Playlist")
+                out.folders.push_back(collectionOf(item, false));
+        } else if (text(item, "MediaType") == "Audio") {
+            out.songs.push_back(songOf(item));
+        }
+    }
     return out;
 }
 

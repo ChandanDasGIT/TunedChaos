@@ -9,7 +9,19 @@ Item {
 
     property int tab: HostedController.SongsTab
     readonly property var tabLists: [HostedController.songs, HostedController.albums,
-                                     HostedController.artists, HostedController.playlists]
+                                     HostedController.artists, HostedController.playlists,
+                                     HostedController.folderEntries]
+    readonly property bool inFolders: tab === HostedController.FoldersTab
+    readonly property int folderSongCount: HostedController.folderEntries.filter(e => e.kind === "song").length
+
+    // Back: out of an album / artist / playlist, or up one folder (false: nothing to go back from)
+    function back() {
+        if (HostedController.detailOpen) {
+            HostedController.closeDetail()
+            return true
+        }
+        return inFolders && HostedController.folderUp()
+    }
 
     onVisibleChanged: if (visible) HostedController.load(tab)
     onTabChanged: {
@@ -159,7 +171,8 @@ Item {
                 { icon: "music", label: qsTr("Songs") },
                 { icon: "compactDisc", label: qsTr("Albums") },
                 { icon: "user", label: qsTr("Artists") },
-                { icon: "listMusic", label: qsTr("Playlists") }
+                { icon: "listMusic", label: qsTr("Playlists") },
+                { icon: "folder", label: qsTr("Folders") }
             ]
             onTabPicked: (index) => root.tab = index
         }
@@ -176,7 +189,62 @@ Item {
             wrapMode: Text.WordWrap
         }
 
-        // Songs, or the list of albums / artists / playlists
+        // Folders: where it is (tap a part to go back there) and "play everything under it"
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.padding
+            Layout.rightMargin: Theme.padding
+            Layout.bottomMargin: 4
+            visible: root.inFolders
+            spacing: Theme.spacing
+
+            ListView {
+                id: crumbs
+                Layout.fillWidth: true
+                Layout.preferredHeight: 30
+                orientation: ListView.Horizontal
+                clip: true
+                spacing: 2
+                model: [{ id: "", name: qsTr("Libraries") }].concat(HostedController.folderCrumbs)
+                onCountChanged: positionViewAtEnd()
+
+                delegate: Row {
+                    required property var modelData
+                    required property int index
+                    height: crumbs.height
+                    spacing: 2
+
+                    Icon {
+                        visible: index > 0
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: "chevronRight"
+                        size: 8
+                        color: Theme.textDim
+                    }
+
+                    PillButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        implicitHeight: 28
+                        transparentIdle: true
+                        active: index === crumbs.count - 1
+                        text: modelData.name
+                        onClicked: HostedController.openCrumb(index - 1)
+                    }
+                }
+            }
+
+            PillButton {
+                visible: HostedController.folderCrumbs.length > 0
+                filled: true
+                iconName: "play"
+                iconSize: 11
+                text: qsTr("Play")
+                implicitHeight: 30
+                onClicked: HostedController.playFolder()
+            }
+        }
+
+        // Songs, the list of albums / artists / playlists, or a folder's folders and songs
         ListView {
             id: list
             Layout.fillWidth: true
@@ -196,18 +264,28 @@ Item {
                 required property var modelData
                 required property int index
 
+                // A song: on the Songs tab, or in a folder (after its folders)
+                readonly property bool song: root.tab === HostedController.SongsTab || modelData.kind === "song"
+                readonly property int songIndex: root.inFolders ? index - (list.count - root.folderSongCount) : index
+
                 width: ListView.view.width
                 thumbnail: modelData.thumbnail || ""
-                title: root.tab === HostedController.SongsTab ? modelData.title : modelData.name
-                subtitle: root.tab === HostedController.SongsTab
-                          ? [modelData.artist, modelData.album].filter(s => s).join("  ·  ")
-                          : modelData.subtitle
-                duration: root.tab === HostedController.SongsTab ? modelData.durationMs : -1
-                playing: root.tab === HostedController.SongsTab && modelData.path === PlayerController.source
-                onTapped: root.tab === HostedController.SongsTab
-                          ? HostedController.play(false, index)
-                          : HostedController.open(root.tab, modelData.id, modelData.name, modelData.thumbnail)
-                onQueueRequested: HostedController.addToQueue(false, index)
+                icon: modelData.kind === "folder" ? "folder" : song ? "music" : "compactDisc"
+                title: song ? modelData.title : modelData.name
+                subtitle: song ? [modelData.artist, modelData.album].filter(s => s).join("  ·  ") : modelData.subtitle
+                duration: song ? modelData.durationMs : -1
+                playing: song && modelData.path === PlayerController.source
+                onTapped: {
+                    if (modelData.kind === "folder")
+                        HostedController.openFolder(modelData.id, modelData.name)
+                    else if (song)
+                        HostedController.play(root.inFolders ? HostedController.FolderList : HostedController.SongsList,
+                                              songIndex)
+                    else
+                        HostedController.open(root.tab, modelData.id, modelData.name, modelData.thumbnail)
+                }
+                onQueueRequested: HostedController.addToQueue(root.inFolders ? HostedController.FolderList
+                                                                             : HostedController.SongsList, songIndex)
             }
         }
 
@@ -247,7 +325,7 @@ Item {
                     text: qsTr("Play")
                     implicitHeight: 32
                     enabled: HostedController.detailSongs.length > 0
-                    onClicked: HostedController.play(true, 0)
+                    onClicked: HostedController.play(HostedController.DetailList, 0)
                 }
             }
 
@@ -274,8 +352,8 @@ Item {
                     subtitle: [modelData.artist, modelData.album].filter(s => s).join("  ·  ")
                     duration: modelData.durationMs
                     playing: modelData.path === PlayerController.source
-                    onTapped: HostedController.play(true, index)
-                    onQueueRequested: HostedController.addToQueue(true, index)
+                    onTapped: HostedController.play(HostedController.DetailList, index)
+                    onQueueRequested: HostedController.addToQueue(HostedController.DetailList, index)
                 }
             }
         }
@@ -294,7 +372,8 @@ Item {
                      { id: "artist", text: qsTr("Artist") }, { id: "year", text: qsTr("Year") }],
                     [{ id: "name", text: qsTr("Name A–Z") }, { id: "nameDesc", text: qsTr("Name Z–A") }],
                     [{ id: "name", text: qsTr("Name A–Z") }, { id: "nameDesc", text: qsTr("Name Z–A") },
-                     { id: "newest", text: qsTr("Newest added") }, { id: "oldest", text: qsTr("Oldest added") }]][root.tab]
+                     { id: "newest", text: qsTr("Newest added") }, { id: "oldest", text: qsTr("Oldest added") }],
+                    [{ id: "name", text: qsTr("Name A–Z") }, { id: "nameDesc", text: qsTr("Name Z–A") }]][root.tab]
 
             delegate: Action {
                 required property var modelData
