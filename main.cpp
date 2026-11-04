@@ -5,6 +5,7 @@
 #include "wrapper/history/historycontroller.h"
 #include "wrapper/library/librarycontroller.h"
 #include "wrapper/locallibrary/locallibrarycontroller.h"
+#include "wrapper/loudness/loudnesscontroller.h"
 #include "wrapper/lyrics/lyricscontroller.h"
 #include "wrapper/player/playercontroller.h"
 #include "wrapper/notifications/notificationcontroller.h"
@@ -160,6 +161,8 @@ int main(int argc, char *argv[])
     PlaylistsController playlists(&playlist, &player, &settings, nullptr);
     MoodsController moods(&playlist, &player, nullptr);
     LocalLibraryController localLibrary(&playlist, &playlists, &ytMetadata, &settings, nullptr);
+    // Measures library songs without ReplayGain tags (while ReplayGain is on)
+    LoudnessController loudness(&player, &playlist, &localLibrary, &settings, nullptr);
     // Reopen the last song, paused where it was (Settings > General).
     HistoryController history(&player, &playlist, &playlists, &localLibrary, &settings, nullptr);
     SmartPlaylistsController smartPlaylists(&history, &localLibrary, &playlist, nullptr);

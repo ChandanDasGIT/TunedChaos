@@ -94,6 +94,10 @@ add_library(backend STATIC
     backend/library/scanner/scanner.cpp
     backend/library/scanner/scanner.h
     backend/library/track/track.h
+    backend/loudness/loudnessmeter/loudnessmeter.cpp
+    backend/loudness/loudnessmeter/loudnessmeter.h
+    backend/loudness/loudnessstore/loudnessstore.cpp
+    backend/loudness/loudnessstore/loudnessstore.h
     backend/lyrics/lrcparser/lrcparser.cpp
     backend/lyrics/lrcparser/lrcparser.h
     backend/lyrics/lyricsprovider/lyricsprovider.cpp
@@ -254,6 +258,8 @@ qt_add_qml_module(TunedChaos
         wrapper/locallibrary/librarysongsmodel.h
         wrapper/locallibrary/locallibrarycontroller.cpp
         wrapper/locallibrary/locallibrarycontroller.h
+        wrapper/loudness/loudnesscontroller.cpp
+        wrapper/loudness/loudnesscontroller.h
         wrapper/lyrics/lyricscontroller.cpp
         wrapper/lyrics/lyricscontroller.h
         wrapper/player/playercontroller.cpp
@@ -365,6 +371,7 @@ target_include_directories(TunedChaos PRIVATE
     wrapper/history
     wrapper/library
     wrapper/locallibrary
+    wrapper/loudness
     wrapper/lyrics
     wrapper/moods
     wrapper/player

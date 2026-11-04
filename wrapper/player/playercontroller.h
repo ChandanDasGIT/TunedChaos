@@ -10,6 +10,7 @@
 
 #include <memory>
 
+class LoudnessStore;
 class Player;
 class SpectrumAnalyzer;
 class StreamResolver;
@@ -37,7 +38,8 @@ class PlayerController : public QObject
     // e.g. "44.1 kHz · 941 kbps · FLAC"; empty until known
     Q_PROPERTY(QString qualityText READ qualityText NOTIFY qualityTextChanged)
     // The song playing, for the audio pipeline: { codec, sampleRate, bitsPerSample, channels,
-    // bitrate, stream, outputRate, gainTrackDb, gainAlbumDb } (gains only when tagged)
+    // bitrate, stream, outputRate, gainSource, gainTrackDb, gainAlbumDb } (local files only:
+    // gainSource "tags" | "measured" | "pending" (not measured yet) | "failed"; gains when known)
     Q_PROPERTY(QVariantMap sourceInfo READ sourceInfo NOTIFY sourceInfoChanged)
     // Audio outputs: [{ id, name }]; id "" = system default (always first)
     Q_PROPERTY(QVariantList outputDevices READ outputDevices NOTIFY outputDevicesChanged)
@@ -54,6 +56,12 @@ public:
 
     // QML singleton factory: returns the instance created in main().
     static PlayerController *create(QQmlEngine *qmlEngine, QJSEngine *jsEngine);
+
+    // Measured loudness for songs without ReplayGain tags (LoudnessController's)
+    void setLoudnessStore(std::shared_ptr<const LoudnessStore> store);
+    // That song's loudness was just measured: if it is playing, its gain is
+    // eased in and its details are read again.
+    void loudnessMeasured(const QString &path);
 
     State state() const { return m_state; }
     bool playing() const { return m_state == Playing; }
@@ -150,4 +158,5 @@ private:
 
     std::unique_ptr<StreamResolver> m_resolver; // before m_player: outlives it
     std::unique_ptr<Player> m_player;
+    std::shared_ptr<const LoudnessStore> m_loudness;
 };

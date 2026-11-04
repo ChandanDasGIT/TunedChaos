@@ -79,6 +79,8 @@ public:
     QString currentSubtitle() const;
     const ::Track *currentTrack() const; // nullptr when nothing is current
     const ::Track *trackForPath(const QString &path) const;
+    // The song that plays after this one ("" = none / not known yet)
+    QString nextPath() const;
     QString currentThumbnail() const;
     const std::vector<::Track> &tracks() const { return m_playlist.tracks(); }
     bool hasNext() const;

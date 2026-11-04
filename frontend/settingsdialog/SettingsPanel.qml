@@ -526,8 +526,8 @@ Rectangle {
                                 description: SettingsController.replayGain === 0
                                     ? qsTr("Off: songs play as loud as they were made.")
                                     : SettingsController.replayGain === 1
-                                      ? qsTr("Track: every song about equally loud, using the loudness stored in your files (songs without it play as they are).")
-                                      : qsTr("Album: albums keep their own ups and downs, while albums are about equally loud.")
+                                      ? qsTr("Track: every song about equally loud. Uses the loudness stored in your files; songs without it are measured once, in the background.")
+                                      : qsTr("Album: albums keep their own ups and downs, while albums are about equally loud. Songs without stored loudness are measured once, in the background.")
                             }
 
                             Flow {
@@ -547,6 +547,19 @@ Rectangle {
                                         onClicked: SettingsController.replayGain = index
                                     }
                                 }
+                            }
+
+                            // Measuring the library's songs (LoudnessController)
+                            Label {
+                                Layout.fillWidth: true
+                                visible: SettingsController.replayGain !== 0 && LoudnessController.songCount > 0
+                                text: LoudnessController.doneCount < LoudnessController.songCount
+                                      ? qsTr("Measuring loudness: %1 of %2 songs done").arg(LoudnessController.doneCount)
+                                                                                     .arg(LoudnessController.songCount)
+                                      : qsTr("All %1 library songs are levelled").arg(LoudnessController.songCount)
+                                color: Theme.textMuted
+                                font.pixelSize: Theme.fontSizeSmall
+                                wrapMode: Text.WordWrap
                             }
                         }
 

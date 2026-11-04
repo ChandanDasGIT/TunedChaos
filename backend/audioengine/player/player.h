@@ -7,6 +7,7 @@
 #include "backend/audioengine/spectrum/spectrum.h"
 #include "backend/library/metadata/metadata.h"
 
+class LoudnessStore;
 class StreamResolver;
 
 #include <atomic>
@@ -81,13 +82,18 @@ public:
     void setFadeLevel(float level); // 0..1 on top of the volume (the sleep timer fading out)
     // ReplayGain: 0 off, 1 track, 2 album (album songs without album values use their track values).
     void setReplayGainMode(int mode);
+    // Measured loudness for files without ReplayGain tags (shared with whoever measures).
+    void setLoudnessStore(std::shared_ptr<const LoudnessStore> store);
+    // That file's loudness was just measured: if it is the one being decoded,
+    // its gain is looked up again and eased in (about a second).
+    void refreshReplayGain(const std::string &path);
     void setEqualizer(const Equalizer::Gains &gainsDb, bool enabled); // takes effect at once
 
     // What is being played, for the visualizer (before volume is applied).
     SpectrumAnalyzer &spectrum() { return m_spectrum; }
 
 private:
-    enum class CommandType { Load, SetNext, Unload, SetDevice, Play, Pause, Stop, Seek, Quit };
+    enum class CommandType { Load, SetNext, Unload, SetDevice, Play, Pause, Stop, Seek, RefreshGain, Quit };
 
     struct Command
     {
@@ -127,6 +133,8 @@ private:
     void applyFadeOut(std::vector<float> &chunk); // the end of a track, when the next one fades in
     void applyRampIn(std::vector<float> &chunk);  // fade-in after a skip / at the start of a track
     void applyReplayGain(std::vector<float> &chunk); // the decoding file's ReplayGain
+    ReplayGain replayGainFor(const std::string &path); // its tags, else its measured loudness
+    double replayGainFactor() const; // m_decodingGain in the current mode, as a multiplier
     void dipOut();                                // skip: fade what is playing out, then mute
     void reportError(const std::string &message);
 
@@ -158,7 +166,13 @@ private:
     int m_nextFadeMs = 0;                     // for m_nextPath
     uint64_t m_rampFrames = 0, m_rampPos = 0; // fade-in still to apply
     ReplayGain m_decodingGain;                // of the file being decoded
+    std::string m_decodingPath;               // that file
+    float m_gainFactor = 1.0f;                // applied now (eases towards the target)
+    float m_gainStep = 0.0f;                  // per frame, while easing
+    uint64_t m_gainRampLeft = 0;              // frames of easing left
     std::atomic<int> m_replayGainMode{0};
+    std::mutex m_loudnessMutex;
+    std::shared_ptr<const LoudnessStore> m_loudness;
 
     // Shared with the realtime thread
     RingBuffer m_ring;

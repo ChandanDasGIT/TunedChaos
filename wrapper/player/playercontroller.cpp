@@ -4,6 +4,7 @@
 #include "backend/audioengine/audiooutput/audiooutput.h"
 #include "backend/audioengine/decoder/decoder.h"
 #include "backend/audioengine/player/player.h"
+#include "backend/loudness/loudnessstore/loudnessstore.h"
 #include "backend/youtube/streamresolver/streamresolver.h"
 
 #include <QFileInfo>
@@ -248,6 +249,19 @@ void PlayerController::refreshOutputDevices()
     });
 }
 
+void PlayerController::setLoudnessStore(std::shared_ptr<const LoudnessStore> store)
+{
+    m_loudness = store;
+    m_player->setLoudnessStore(std::move(store));
+}
+
+void PlayerController::loudnessMeasured(const QString &path)
+{
+    m_player->refreshReplayGain(path.toStdString()); // (the player checks it is the one decoding)
+    if (path == m_source)
+        updateQuality();
+}
+
 // Probes the file's format on a worker thread and builds the quality chip text.
 void PlayerController::updateQuality()
 {
@@ -261,7 +275,7 @@ void PlayerController::updateQuality()
         return;
     }
 
-    m_probePool.start([this, path, generation, resolver = m_resolver.get()] {
+    m_probePool.start([this, path, generation, resolver = m_resolver.get(), loudness = m_loudness] {
         AudioInfo info;
         QStringList parts;
         QVariantMap details;
@@ -292,7 +306,21 @@ void PlayerController::updateQuality()
                        {QStringLiteral("cutoff"), Decoder::resamplerInfo().cutoff},
                        {QStringLiteral("bufferMs"), qint64(Player::bufferMs())}};
             if (!stream) {
-                const ReplayGain gain = Metadata::readReplayGain(path.toStdString());
+                // The file's tags, else its measured loudness (the player's order)
+                ReplayGain gain = Metadata::readReplayGain(path.toStdString());
+                QString gainSource = QStringLiteral("tags");
+                if (!gain.hasTrack && !gain.hasAlbum) {
+                    gainSource = QStringLiteral("pending");
+                    if (loudness) {
+                        if (const auto measured = loudness->replayGain(path.toStdString())) {
+                            gain = *measured;
+                            gainSource = QStringLiteral("measured");
+                        } else if (loudness->kind(path.toStdString()) == LoudnessStore::Kind::Failed) {
+                            gainSource = QStringLiteral("failed");
+                        }
+                    }
+                }
+                details.insert(QStringLiteral("gainSource"), gainSource);
                 if (gain.hasTrack)
                     details.insert(QStringLiteral("gainTrackDb"), gain.trackGainDb);
                 if (gain.hasAlbum)

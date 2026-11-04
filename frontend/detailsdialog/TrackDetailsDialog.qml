@@ -93,8 +93,14 @@ Popup {
               on: true, rows: convert },
             { name: qsTr("ReplayGain"), icon: "sliders", status: gainOn ? qsTr("Active") : qsTr("Off"), on: gainOn,
               rows: [[qsTr("Mode"), mode === 0 ? qsTr("Off") : mode === 2 ? qsTr("Album") : qsTr("Track")],
-                     [qsTr("This song"), db === undefined ? qsTr("No ReplayGain tags")
-                                                          : (db > 0 ? "+" : "") + db.toFixed(1) + " dB"]] },
+                     [qsTr("This song"), db !== undefined ? (db > 0 ? "+" : "") + db.toFixed(1) + " dB"
+                                         : s.gainSource === "pending" ? qsTr("Not measured yet")
+                                         : s.gainSource === "failed" ? qsTr("Couldn't be measured")
+                                         : qsTr("Plays as it is")],
+                     [qsTr("From"), s.stream ? qsTr("YouTube songs aren't levelled")
+                                  : s.gainSource === "measured" ? qsTr("Measured by the app")
+                                  : s.gainSource === "tags" ? qsTr("The file's tags")
+                                  : qsTr("Nothing yet")]] },
             { name: qsTr("Fades"), icon: "wave", status: fade > 0 ? qsTr("Crossfade") : qsTr("Gapless"), on: fade > 0,
               rows: [[qsTr("Between songs"), fade > 0 ? qsTr("%1 s").arg(fade) : qsTr("None")],
                      [qsTr("Curve"), qsTr("Quarter sine")]] },

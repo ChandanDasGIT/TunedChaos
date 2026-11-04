@@ -1,5 +1,6 @@
 #include "backend/audioengine/player/player.h"
 
+#include "backend/loudness/loudnessstore/loudnessstore.h"
 #include "backend/youtube/streamresolver/streamresolver.h"
 
 #include <algorithm>
@@ -57,6 +58,7 @@ int64_t Player::bufferMs()
 }
 
 void Player::seek(int64_t positionMs) { post({CommandType::Seek, {}, positionMs}); }
+void Player::refreshReplayGain(const std::string &path) { post({CommandType::RefreshGain, path, 0}); }
 
 void Player::setEqualizer(const Equalizer::Gains &gainsDb, bool enabled)
 {
@@ -228,6 +230,15 @@ void Player::handle(const Command &command)
         break;
     }
 
+    case CommandType::RefreshGain:
+        if (command.path == m_decodingPath && !StreamResolver::isYouTube(command.path)) {
+            m_decodingGain = replayGainFor(command.path);
+            constexpr uint64_t EaseFrames = Decoder::OutputRate; // a second
+            m_gainStep = (float(replayGainFactor()) - m_gainFactor) / float(EaseFrames);
+            m_gainRampLeft = m_gainStep != 0.0f ? EaseFrames : 0;
+        }
+        break;
+
     case CommandType::Quit:
         break;
     }
@@ -272,8 +283,11 @@ bool Player::openPath(Decoder &decoder, const std::string &path)
 {
     if (&decoder == m_decoder.get()) {
         m_decodedFrames = 0;
-        // YouTube evens out loudness itself and has no tags to read.
-        m_decodingGain = StreamResolver::isYouTube(path) ? ReplayGain{} : Metadata::readReplayGain(path);
+        // (YouTube songs have no tags to read, and aren't measured.)
+        m_decodingGain = StreamResolver::isYouTube(path) ? ReplayGain{} : replayGainFor(path);
+        m_decodingPath = path;
+        m_gainFactor = float(replayGainFactor()); // a new file starts at its own level
+        m_gainRampLeft = 0;
     }
     std::optional<std::string> source = path;
     if (m_resolver && StreamResolver::isYouTube(path)) {
@@ -380,22 +394,65 @@ void Player::applyFadeOut(std::vector<float> &chunk)
     }
 }
 
-// Turned up or down by the file's ReplayGain (never past its peak: no clipping).
-void Player::applyReplayGain(std::vector<float> &chunk)
+void Player::setLoudnessStore(std::shared_ptr<const LoudnessStore> store)
+{
+    std::lock_guard lock(m_loudnessMutex);
+    m_loudness = std::move(store);
+}
+
+ReplayGain Player::replayGainFor(const std::string &path)
+{
+    const ReplayGain tags = Metadata::readReplayGain(path);
+    if (tags.hasTrack || tags.hasAlbum)
+        return tags;
+    std::shared_ptr<const LoudnessStore> store;
+    {
+        std::lock_guard lock(m_loudnessMutex);
+        store = m_loudness;
+    }
+    if (store)
+        if (const auto measured = store->replayGain(path))
+            return *measured;
+    return tags;
+}
+
+// The file's ReplayGain in the current mode (never past its peak: no clipping).
+double Player::replayGainFactor() const
 {
     const int mode = m_replayGainMode.load(std::memory_order_relaxed);
     const ReplayGain &g = m_decodingGain;
     const bool album = mode == 2 && g.hasAlbum;
     if (mode == 0 || (!album && !g.hasTrack))
-        return;
+        return 1.0;
     const double peak = album ? g.albumPeak : g.trackPeak;
     double factor = std::pow(10.0, (album ? g.albumGainDb : g.trackGainDb) / 20.0);
     if (peak > 0)
         factor = std::min(factor, 1.0 / peak);
-    if (factor == 1.0)
+    return factor;
+}
+
+// Turned up or down by the file's ReplayGain; a gain that arrived while the
+// file plays (just measured) is eased in.
+void Player::applyReplayGain(std::vector<float> &chunk)
+{
+    if (m_gainRampLeft == 0) {
+        m_gainFactor = float(replayGainFactor()); // (a mode change applies at once)
+        if (m_gainFactor == 1.0f)
+            return;
+        for (float &sample : chunk)
+            sample *= m_gainFactor;
         return;
-    for (float &sample : chunk)
-        sample *= float(factor);
+    }
+    const size_t frames = chunk.size() / Channels;
+    for (size_t f = 0; f < frames; ++f) {
+        if (m_gainRampLeft > 0) {
+            m_gainFactor += m_gainStep;
+            if (--m_gainRampLeft == 0)
+                m_gainFactor = float(replayGainFactor());
+        }
+        for (size_t c = 0; c < Channels; ++c)
+            chunk[f * Channels + c] *= m_gainFactor;
+    }
 }
 
 void Player::applyRampIn(std::vector<float> &chunk)

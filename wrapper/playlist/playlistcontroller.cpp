@@ -622,6 +622,17 @@ bool PlaylistController::resumeAlone(const ::Track &track, qint64 positionMs)
     return true;
 }
 
+QString PlaylistController::nextPath() const
+{
+    if (m_active->currentIndex() < 0)
+        return {};
+    if (const int next = m_active->nextIndex(); next >= 0)
+        return QString::fromStdString(m_active->at(size_t(next)).path);
+    if (m_active == &m_playlist && !m_followUp.empty())
+        return QString::fromStdString(m_followUp.front().path);
+    return {};
+}
+
 void PlaylistController::queueNext()
 {
     const int current = m_active->currentIndex();
