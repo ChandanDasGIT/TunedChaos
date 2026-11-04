@@ -29,12 +29,25 @@ Rectangle {
     signal editTagsRequested(string path)
     signal foldersSettingsRequested() // the music folders are chosen in Settings
 
-    onTabChanged: LocalLibraryController.closeDetail()
+    onTabChanged: {
+        LocalLibraryController.closeDetail()
+        letterGrid.visible = false
+    }
 
-    // Back / Esc: out of the album / artist, or up one folder (false: nothing to go back from).
-    readonly property bool canGoBack: inDetail || (tab === 4 && hasFolders && LocalLibraryController.folder !== "")
+    // The letter grid over a list (a letter header was tapped)
+    function openLetters(tab, view) {
+        letterGrid.starts = LocalLibraryController.letterStarts(tab)
+        letterGrid.view = view
+        letterGrid.visible = true
+    }
+
+    // Back / Esc: the letter grid, out of the album / artist, or up one folder (false: nothing to go back from).
+    readonly property bool canGoBack: letterGrid.visible || inDetail
+                                      || (tab === 4 && hasFolders && LocalLibraryController.folder !== "")
     function back() {
-        if (inDetail)
+        if (letterGrid.visible)
+            letterGrid.visible = false
+        else if (inDetail)
             LocalLibraryController.closeDetail()
         else if (canGoBack)
             LocalLibraryController.folderUp()
@@ -329,6 +342,7 @@ Rectangle {
                     Layout.fillHeight: true
                     model: LocalLibraryController.songs
                     list: LocalLibraryController.SongsList
+                    letters: LocalLibraryController.songLetters
                 }
             }
 
@@ -447,6 +461,7 @@ Rectangle {
             // ---- Artists
             EntryList {
                 page: 2
+                letters: LocalLibraryController.artistLetters
                 model: LocalLibraryController.artists
                 onEntryOpened: (name) => LocalLibraryController.showArtist(name)
             }
@@ -454,6 +469,7 @@ Rectangle {
             // ---- Genres
             EntryList {
                 page: 3
+                letters: LocalLibraryController.genreLetters
                 model: LocalLibraryController.genres
                 note: LocalLibraryController.songsWithoutGenre > 0
                       ? qsTr("Not shown: %1 without a genre tag").arg(Util.songCount(LocalLibraryController.songsWithoutGenre)) : ""
@@ -828,12 +844,38 @@ Rectangle {
         onTriggered: SettingsController[setting] = sort
     }
 
+    LetterJumpGrid {
+        id: letterGrid
+
+        property Item view: null
+
+        anchors.fill: parent
+        visible: false
+        z: 50
+        onChosen: (row) => {
+            if (view)
+                view.positionViewAtIndex(row, ListView.Beginning)
+            visible = false
+        }
+        onClosed: visible = false
+    }
+
     component SongList: ListView {
         id: songList
         populate: ListPopulate {}
 
         property int list: LocalLibraryController.SongsList
         property bool showAlbum: true
+        property bool letters: false // letter headers (the Songs tab sorted by title)
+
+        section.property: letters ? "letter" : ""
+        section.criteria: ViewSection.FullString
+        section.delegate: LetterHeader {
+            required property string section
+            width: songList.width
+            letter: section
+            onTapped: root.openLetters(0, songList)
+        }
 
         Layout.leftMargin: Theme.spacing
         Layout.rightMargin: Theme.spacing
@@ -867,6 +909,7 @@ Rectangle {
 
         required property int page
         property string note // a line above the list
+        property bool letters: false // letter headers (sorted by name)
 
         signal entryOpened(string name)
 
@@ -903,60 +946,78 @@ Rectangle {
             }
         }
 
-        delegate: Rectangle {
-            id: artistRow
+        delegate: Column {
+            id: entry
 
             required property var modelData
+            required property int index
 
             width: ListView.view.width
-            height: 52
-            radius: Theme.radius
-            color: artistHover.hovered ? Theme.hover : "transparent"
 
-            Behavior on color { ColorAnimation { duration: Theme.animFast } }
+            // The first of its letter: the letter's header above it
+            LetterHeader {
+                width: parent.width
+                visible: entries.letters && (entry.index === 0
+                                             || entries.model[entry.index - 1].letter !== entry.modelData.letter)
+                letter: entry.modelData.letter || ""
+                onTapped: root.openLetters(entries.page, entries)
+            }
 
-            HoverHandler { id: artistHover; cursorShape: Qt.PointingHandCursor }
-            TapHandler { onTapped: entries.entryOpened(artistRow.modelData.name) }
+            Rectangle {
+                id: artistRow
 
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: 8
-                anchors.rightMargin: 12
-                spacing: Theme.padding
+                readonly property var modelData: entry.modelData
 
-                Rectangle {
-                    Layout.preferredWidth: 36
-                    Layout.preferredHeight: 36
-                    radius: 18
-                    color: Theme.accentSoft
+                width: parent.width
+                height: 52
+                radius: Theme.radius
+                color: artistHover.hovered ? Theme.hover : "transparent"
+
+                Behavior on color { ColorAnimation { duration: Theme.animFast } }
+
+                HoverHandler { id: artistHover; cursorShape: Qt.PointingHandCursor }
+                TapHandler { onTapped: entries.entryOpened(artistRow.modelData.name) }
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 8
+                    anchors.rightMargin: 12
+                    spacing: Theme.padding
+
+                    Rectangle {
+                        Layout.preferredWidth: 36
+                        Layout.preferredHeight: 36
+                        radius: 18
+                        color: Theme.accentSoft
+
+                        Label {
+                            anchors.centerIn: parent
+                            text: artistRow.modelData.name.charAt(0).toUpperCase()
+                            color: Theme.accent
+                            font.pixelSize: Theme.fontSizeLarge
+                            font.weight: Font.DemiBold
+                        }
+                    }
 
                     Label {
-                        anchors.centerIn: parent
-                        text: artistRow.modelData.name.charAt(0).toUpperCase()
-                        color: Theme.accent
-                        font.pixelSize: Theme.fontSizeLarge
-                        font.weight: Font.DemiBold
+                        Layout.fillWidth: true
+                        text: artistRow.modelData.name
+                        color: Theme.text
+                        font.pixelSize: Theme.fontSize
+                        elide: Text.ElideRight
                     }
-                }
 
-                Label {
-                    Layout.fillWidth: true
-                    text: artistRow.modelData.name
-                    color: Theme.text
-                    font.pixelSize: Theme.fontSize
-                    elide: Text.ElideRight
-                }
+                    Label {
+                        text: Util.songCount(artistRow.modelData.count)
+                        color: Theme.textMuted
+                        font.pixelSize: Theme.fontSizeSmall
+                    }
 
-                Label {
-                    text: Util.songCount(artistRow.modelData.count)
-                    color: Theme.textMuted
-                    font.pixelSize: Theme.fontSizeSmall
-                }
-
-                Icon {
-                    name: "chevronRight"
-                    size: 10
-                    color: Theme.textDim
+                    Icon {
+                        name: "chevronRight"
+                        size: 10
+                        color: Theme.textDim
+                    }
                 }
             }
         }

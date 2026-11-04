@@ -42,6 +42,11 @@ class LocalLibraryController : public QObject
     Q_PROPERTY(QVariantList albums READ albums NOTIFY shownChanged)       // [{ key, album, artist, coverPath, count }]
     Q_PROPERTY(QVariantList artists READ artists NOTIFY shownChanged)     // [{ name, count }]
     Q_PROPERTY(QVariantList genres READ genres NOTIFY shownChanged)       // [{ name, count }]
+    // Letter groups shown per tab (Settings > Library on, and the tab sorted by name).
+    // Albums / artists / genres carry "letter" too, songs a "letter" role.
+    Q_PROPERTY(bool songLetters READ songLetters NOTIFY lettersChanged)
+    Q_PROPERTY(bool artistLetters READ artistLetters NOTIFY lettersChanged)
+    Q_PROPERTY(bool genreLetters READ genreLetters NOTIFY lettersChanged)
     // Songs in no genre (they aren't in `genres`)
     Q_PROPERTY(int songsWithoutGenre READ songsWithoutGenre NOTIFY contentsChanged)
     // Albums by when their newest song was added, newest first (as albums, + addedAt)
@@ -71,6 +76,11 @@ public:
     static LocalLibraryController *create(QQmlEngine *qmlEngine, QJSEngine *jsEngine);
 
     LibrarySongsModel *songs() const { return m_songs.get(); }
+    bool songLetters() const;
+    bool artistLetters() const;
+    bool genreLetters() const;
+    // Where each letter starts in a tab's list (0 songs, 2 artists, 3 genres): { "A": 0, "B": 12, ... }
+    Q_INVOKABLE QVariantMap letterStarts(int tab) const;
     LibrarySongsModel *detailSongs() const { return m_detail.get(); }
     QString search() const { return m_search; }
     void setSearch(const QString &search);
@@ -139,6 +149,7 @@ signals:
     void scanChanged();
     void detailChanged();
     void folderChanged();
+    void lettersChanged();
     void notice(const QString &text);
     void tagsSaved(const QString &path, bool ok);
 

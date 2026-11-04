@@ -880,6 +880,21 @@ Rectangle {
                         title: qsTr("Library")
 
                         SettingsCard {
+                            title: qsTr("Browsing")
+
+                            SettingsRow {
+                                Layout.fillWidth: true
+                                title: qsTr("Letter groups")
+                                description: qsTr("Songs, artists and genres sorted by name (A–Z or Z–A) get a header for each letter. Tap a letter to jump to another one.")
+
+                                SettingsSwitch {
+                                    checked: SettingsController.letterGroups
+                                    onToggled: SettingsController.letterGroups = checked
+                                }
+                            }
+                        }
+
+                        SettingsCard {
                             title: qsTr("Music folders")
 
                             SettingsRow {

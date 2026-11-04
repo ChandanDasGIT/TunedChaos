@@ -87,6 +87,8 @@ add_library(backend STATIC
     backend/audioengine/spectrum/spectrum.h
     backend/library/coverfinder/coverfinder.cpp
     backend/library/coverfinder/coverfinder.h
+    backend/library/letterindex/letterindex.cpp
+    backend/library/letterindex/letterindex.h
     backend/library/metadata/metadata.cpp
     backend/library/metadata/metadata.h
     backend/library/musiclibrary/musiclibrary.cpp
@@ -329,6 +331,8 @@ qt_add_qml_module(TunedChaos
         frontend/library/LibraryPanel.qml
         frontend/library/LibraryAddAllMenu.qml
         frontend/library/LibrarySongMenu.qml
+        frontend/library/LetterHeader.qml
+        frontend/library/LetterJumpGrid.qml
         frontend/library/LibrarySongRow.qml
         frontend/lyrics/LyricsView.qml
         frontend/nowplaying/AlbumArt.qml

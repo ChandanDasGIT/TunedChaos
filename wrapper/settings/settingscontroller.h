@@ -104,6 +104,8 @@ class SettingsController : public QObject
     // The Library's Songs tab: "title", "titleDesc", "newest", "oldest", "modifiedNew",
     // "modifiedOld", "artist" or "album"
     Q_PROPERTY(QString librarySort READ librarySort WRITE setLibrarySort NOTIFY librarySortChanged)
+    // Library lists sorted by name get letter headers (# A..Z), tap one to jump to a letter
+    Q_PROPERTY(bool letterGroups READ letterGroups WRITE setLetterGroups NOTIFY letterGroupsChanged)
     // Albums: "name", "nameDesc", "newest", "oldest", "modifiedNew", "modifiedOld", "artist" or "mostSongs"
     Q_PROPERTY(QString albumSort READ albumSort WRITE setAlbumSort NOTIFY librarySortChanged)
     // Artists: "name", "nameDesc", "mostSongs" or "fewestSongs"
@@ -243,6 +245,8 @@ public:
     QString defaultPanel() const;
     void setDefaultPanel(const QString &panel);
     QString librarySort() const;
+    bool letterGroups() const;
+    void setLetterGroups(bool enabled);
     void setLibrarySort(const QString &sort);
     QString albumSort() const;
     void setAlbumSort(const QString &sort);
@@ -324,6 +328,7 @@ signals:
     void libraryFoldersChanged();
     void libraryExcludedChanged();
     void librarySortChanged();
+    void letterGroupsChanged();
     void panelsChanged();
     void navDividersChanged();
     void startPanelChanged();

@@ -1,5 +1,7 @@
 #include "wrapper/locallibrary/locallibrarycontroller.h"
 
+#include "backend/library/letterindex/letterindex.h"
+
 #include "wrapper/files/files.h"
 #include "backend/library/metadata/metadata.h"
 #include "backend/library/musiclibrary/musiclibrary.h"
@@ -24,6 +26,11 @@
 #include <set>
 
 namespace {
+
+QString letterOf(const QString &name)
+{
+    return QString::fromStdString(LetterIndex::letterOf(name.toStdString()));
+}
 
 std::string lower(std::string s)
 {
@@ -240,6 +247,8 @@ LocalLibraryController::LocalLibraryController(PlaylistController *queue, Playli
     connect(m_settings, &SettingsController::libraryFoldersChanged, this, &LocalLibraryController::rebuildFolder);
     connect(m_settings, &SettingsController::libraryExcludedChanged, this, &LocalLibraryController::refresh);
     connect(m_settings, &SettingsController::librarySortChanged, this, &LocalLibraryController::applySearch);
+    connect(m_settings, &SettingsController::librarySortChanged, this, &LocalLibraryController::lettersChanged);
+    connect(m_settings, &SettingsController::letterGroupsChanged, this, &LocalLibraryController::lettersChanged);
     startRefresh(true); // the saved library at once, then a check for changes
 }
 
@@ -405,7 +414,8 @@ void LocalLibraryController::setTracks(std::vector<Track> tracks)
     }
     m_artists.clear();
     for (const auto &[key, entry] : artists)
-        m_artists.append(QVariantMap{{QStringLiteral("name"), entry.first}, {QStringLiteral("count"), entry.second}});
+        m_artists.append(QVariantMap{{QStringLiteral("name"), entry.first}, {QStringLiteral("count"), entry.second},
+                                     {QStringLiteral("letter"), letterOf(entry.first)}});
 
     // Genres
     std::map<std::string, std::pair<QString, int>> genres; // lowercase -> (name, songs)
@@ -423,7 +433,8 @@ void LocalLibraryController::setTracks(std::vector<Track> tracks)
     }
     m_genres.clear();
     for (const auto &[key, entry] : genres)
-        m_genres.append(QVariantMap{{QStringLiteral("name"), entry.first}, {QStringLiteral("count"), entry.second}});
+        m_genres.append(QVariantMap{{QStringLiteral("name"), entry.first}, {QStringLiteral("count"), entry.second},
+                                    {QStringLiteral("letter"), letterOf(entry.first)}});
 
     emit contentsChanged();
     applySearch();
@@ -800,6 +811,48 @@ QVariantList LocalLibraryController::folderItems(const QString &path) const
     for (const Track &t : folderTracks(cleanFolder(path), true))
         out.append(QVariantMap{{QStringLiteral("path"), QString::fromStdString(t.path)}});
     return out;
+}
+
+bool LocalLibraryController::songLetters() const
+{
+    const QString sort = m_settings->librarySort();
+    return m_settings->letterGroups() && (sort == QLatin1String("title") || sort == QLatin1String("titleDesc"));
+}
+
+static bool byName(const QString &sort)
+{
+    return sort == QLatin1String("name") || sort == QLatin1String("nameDesc");
+}
+
+bool LocalLibraryController::artistLetters() const
+{
+    return m_settings->letterGroups() && byName(m_settings->artistSort());
+}
+
+bool LocalLibraryController::genreLetters() const
+{
+    return m_settings->letterGroups() && byName(m_settings->genreSort());
+}
+
+QVariantMap LocalLibraryController::letterStarts(int tab) const
+{
+    QVariantMap starts;
+    if (tab == 0) {
+        const std::vector<Track> &songs = m_songs->tracks();
+        for (size_t i = 0; i < songs.size(); ++i) {
+            const QString letter = QString::fromStdString(LetterIndex::letterOf(songs[i].title));
+            if (!starts.contains(letter))
+                starts.insert(letter, int(i));
+        }
+        return starts;
+    }
+    const QVariantList &list = tab == 2 ? m_artists : m_genres;
+    for (int i = 0; i < list.size(); ++i) {
+        const QString letter = list[i].toMap().value(QStringLiteral("letter")).toString();
+        if (!starts.contains(letter))
+            starts.insert(letter, i);
+    }
+    return starts;
 }
 
 QVariantMap LocalLibraryController::tagsOf(const QString &path) const

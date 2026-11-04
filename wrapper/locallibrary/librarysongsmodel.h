@@ -17,7 +17,7 @@ class LibrarySongsModel : public QAbstractListModel
     Q_PROPERTY(int count READ count NOTIFY countChanged)
 
 public:
-    enum Role { PathRole = Qt::UserRole + 1, TitleRole, ArtistRole, AlbumRole, DurationRole, TrackNumberRole };
+    enum Role { PathRole = Qt::UserRole + 1, TitleRole, ArtistRole, AlbumRole, DurationRole, TrackNumberRole, LetterRole };
 
     using QAbstractListModel::QAbstractListModel;
 

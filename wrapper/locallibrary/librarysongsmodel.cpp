@@ -1,5 +1,7 @@
 #include "wrapper/locallibrary/librarysongsmodel.h"
 
+#include "backend/library/letterindex/letterindex.h"
+
 int LibrarySongsModel::rowCount(const QModelIndex &parent) const
 {
     return parent.isValid() ? 0 : int(m_tracks.size());
@@ -17,6 +19,7 @@ QVariant LibrarySongsModel::data(const QModelIndex &index, int role) const
     case AlbumRole: return QString::fromStdString(track.album);
     case DurationRole: return qint64(track.durationMs);
     case TrackNumberRole: return track.track;
+    case LetterRole: return QString::fromStdString(LetterIndex::letterOf(track.title)); // its letter group
     }
     return {};
 }
@@ -26,6 +29,7 @@ QHash<int, QByteArray> LibrarySongsModel::roleNames() const
     return {
         {PathRole, "path"},       {TitleRole, "title"},       {ArtistRole, "artist"},
         {AlbumRole, "album"},     {DurationRole, "duration"}, {TrackNumberRole, "trackNumber"},
+        {LetterRole, "letter"},
     };
 }
 
