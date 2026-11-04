@@ -16,6 +16,9 @@ Rectangle {
     property bool pinned: false
     property bool showCloseButton: true
     property int tab: 0
+    // What the panel shows: "" = the choice between the two libraries, "local" = the
+    // songs on this device (tabs below), "hosted" = a music server (frontend/hosted)
+    property string source: ""
     readonly property bool hasFolders: SettingsController.libraryFolders.length > 0
     readonly property bool inDetail: LocalLibraryController.detailKind !== 0 && (tab >= 1 && tab <= 3)
 
@@ -34,6 +37,12 @@ Rectangle {
         letterGrid.visible = false
     }
 
+    // Library opened: the choice between the two libraries again
+    function chooseSource() {
+        letterGrid.visible = false
+        source = ""
+    }
+
     // The letter grid over a list (a letter header was tapped)
     function openLetters(tab, view) {
         letterGrid.starts = LocalLibraryController.letterStarts(tab)
@@ -44,19 +53,23 @@ Rectangle {
     // Back / Esc: the letter grid, out of the album / artist, or up one folder (false: nothing to go back from).
     readonly property bool canGoBack: letterGrid.visible || inDetail
                                       || (tab === 4 && hasFolders && LocalLibraryController.folder !== "")
+                                      || source !== ""
     function back() {
         if (letterGrid.visible)
             letterGrid.visible = false
         else if (inDetail)
             LocalLibraryController.closeDetail()
-        else if (canGoBack)
+        else if (source === "local" && tab === 4 && hasFolders && LocalLibraryController.folder !== "")
             LocalLibraryController.folderUp()
+        else if (source !== "")
+            source = "" // back to the choice
         else
             return false
         return true
     }
     // Ctrl+F: the search of the open tab, ready to type.
     function focusSearch() {
+        source = "local"
         LocalLibraryController.closeDetail()
         searchField.forceActiveFocus()
         searchField.selectAll()
@@ -149,21 +162,33 @@ Rectangle {
                 anchors.rightMargin: Theme.spacing
                 spacing: Theme.spacing
 
+                ControlButton {
+                    visible: root.source !== ""
+                    iconName: "back"
+                    iconSize: 13
+                    iconColor: Theme.textMuted
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Both libraries")
+                    onClicked: root.source = ""
+                }
+
                 Icon {
+                    visible: root.source === ""
                     name: "compactDisc"
                     size: 14
                     color: Theme.accent
                 }
 
                 Label {
-                    text: qsTr("Library")
+                    text: root.source === "local" ? qsTr("Local library")
+                        : root.source === "hosted" ? qsTr("Hosted library") : qsTr("Library")
                     color: Theme.text
                     font.pixelSize: Theme.fontSizeLarge
                 }
 
                 Label {
                     Layout.fillWidth: true
-                    visible: LocalLibraryController.songCount > 0
+                    visible: root.source === "local" && LocalLibraryController.songCount > 0
                     text: Util.songCount(LocalLibraryController.songCount)
                     color: Theme.textMuted
                     font.pixelSize: Theme.fontSizeSmall
@@ -172,11 +197,12 @@ Rectangle {
 
                 Item {
                     Layout.fillWidth: true
-                    visible: LocalLibraryController.songCount === 0
+                    visible: root.source !== "local" || LocalLibraryController.songCount === 0
                 }
 
                 ControlButton {
                     id: refreshButton
+                    visible: root.source === "local"
                     iconName: "refresh"
                     iconSize: 13
                     enabled: root.hasFolders && !LocalLibraryController.scanning
@@ -222,8 +248,25 @@ Rectangle {
         }
 
         // Tabs
+        // ---- The choice between the two libraries
+        LibrarySourceChooser {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.source === ""
+            onChosen: (source) => root.source = source
+        }
+
+        // ---- Hosted library (a music server)
+        HostedLibraryView {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.source === "hosted"
+        }
+
+        // ---- Local library: tabs, search and the lists
         TabRow {
             id: tabRow
+            visible: root.source === "local"
             Layout.fillWidth: true
             Layout.margins: Theme.padding
             Layout.bottomMargin: 4
@@ -243,7 +286,7 @@ Rectangle {
             Layout.fillWidth: true
             Layout.leftMargin: Theme.padding
             Layout.rightMargin: Theme.padding
-            visible: LocalLibraryController.scanning
+            visible: root.source === "local" && LocalLibraryController.scanning
             text: LocalLibraryController.scanTotal > 0
                   ? qsTr("Reading songs… %1 / %2").arg(LocalLibraryController.scanDone).arg(LocalLibraryController.scanTotal)
                   : qsTr("Looking for songs…")
@@ -258,7 +301,7 @@ Rectangle {
             Layout.rightMargin: Theme.padding
             Layout.topMargin: 4
             Layout.bottomMargin: Theme.spacing
-            visible: LocalLibraryController.songCount > 0 && !root.inDetail
+            visible: root.source === "local" && LocalLibraryController.songCount > 0 && !root.inDetail
             spacing: Theme.spacing
 
             TextField {
@@ -324,6 +367,7 @@ Rectangle {
         // Pages: the new one slides in from its side, the old one out the other way.
         Item {
             id: pages
+            visible: root.source === "local"
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true

@@ -331,9 +331,11 @@ qt_add_qml_module(TunedChaos
         frontend/library/LibraryPanel.qml
         frontend/library/LibraryAddAllMenu.qml
         frontend/library/LibrarySongMenu.qml
+        frontend/hosted/HostedLibraryView.qml
         frontend/library/LetterHeader.qml
         frontend/library/LetterJumpGrid.qml
         frontend/library/LibrarySongRow.qml
+        frontend/library/LibrarySourceChooser.qml
         frontend/lyrics/LyricsView.qml
         frontend/nowplaying/AlbumArt.qml
         frontend/nowplaying/MiniPlayer.qml

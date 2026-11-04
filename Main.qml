@@ -787,6 +787,7 @@ ApplicationWindow {
 
                 // Swapping: the outgoing panel fades out while this one fades and slides in.
                 readonly property bool current: rightSlot.face === "library"
+                onCurrentChanged: if (current) chooseSource() // opened: the choice between the libraries
                 opacity: current ? 1 : 0
                 visible: current || opacity > 0
                 z: current ? 1 : 0
@@ -975,7 +976,7 @@ ApplicationWindow {
     SlidePanel {
         id: libraryDrawer
         objectName: "libraryDrawer"
-        onAboutToShow: { libraryPull.reset(); window.playerUp = false }
+        onAboutToShow: { libraryPull.reset(); window.playerUp = false; drawerLibrary.chooseSource() }
         onOpened: if (window.searchOnOpen) { window.searchOnOpen = false; drawerLibrary.focusSearch() }
         onClosed: {
             window.searchOnOpen = false
