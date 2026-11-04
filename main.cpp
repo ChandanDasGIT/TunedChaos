@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
     MoodsController moods(&playlist, &player, nullptr);
     LocalLibraryController localLibrary(&playlist, &playlists, &ytMetadata, &settings, nullptr);
     // Library > Hosted library: music servers (Jellyfin)
-    HostedController hosted(&player, &playlist, nullptr);
+    HostedController hosted(&player, &playlist, &settings, nullptr);
     // Measures library songs without ReplayGain tags (while ReplayGain is on)
     LoudnessController loudness(&player, &playlist, &localLibrary, &settings, nullptr);
     // Reopen the last song, paused where it was (Settings > General).

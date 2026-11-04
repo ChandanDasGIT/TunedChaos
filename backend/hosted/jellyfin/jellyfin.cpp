@@ -119,6 +119,25 @@ const json *itemsOf(const json &answer)
     return it != answer.end() && it->is_array() ? &*it : nullptr;
 }
 
+// Jellyfin's SortBy / SortOrder for a sort (songs: track order within albums)
+std::string sortQuery(HostedServer::Sort sort, bool songs)
+{
+    using Sort = HostedServer::Sort;
+    const std::string inAlbum = songs ? ",ParentIndexNumber,IndexNumber" : "";
+    switch (sort) {
+    case Sort::Name: return "&SortBy=SortName&SortOrder=Ascending";
+    case Sort::NameDesc: return "&SortBy=SortName&SortOrder=Descending";
+    case Sort::Newest: return "&SortBy=DateCreated,SortName&SortOrder=Descending";
+    case Sort::Oldest: return "&SortBy=DateCreated,SortName&SortOrder=Ascending";
+    case Sort::Artist:
+        return songs ? "&SortBy=Artist,Album" + inAlbum + ",SortName&SortOrder=Ascending"
+                     : "&SortBy=AlbumArtist,SortName&SortOrder=Ascending";
+    case Sort::Album: return "&SortBy=Album" + inAlbum + ",SortName&SortOrder=Ascending";
+    case Sort::Year: return "&SortBy=ProductionYear,SortName&SortOrder=Descending";
+    }
+    return "&SortBy=SortName";
+}
+
 std::string reason(const HttpResponse &response)
 {
     if (!response.error.empty())
@@ -196,26 +215,28 @@ std::optional<std::string> JellyfinServer::get(const std::string &pathAndQuery)
     return response.body;
 }
 
-std::optional<std::vector<HostedSong>> JellyfinServer::songs()
+std::optional<std::vector<HostedSong>> JellyfinServer::songs(Sort sort)
 {
-    return songsOf(Kind::Albums, {}); // (no album: every song)
+    return songList("/Users/" + HttpClient::urlEncode(m_account.userId)
+                    + "/Items?IncludeItemTypes=Audio&Recursive=true&EnableTotalRecordCount=false" + sortQuery(sort, true));
 }
 
-std::optional<std::vector<HostedCollection>> JellyfinServer::collections(Kind kind)
+std::optional<std::vector<HostedCollection>> JellyfinServer::collections(Kind kind, Sort sort)
 {
     const std::string user = HttpClient::urlEncode(m_account.userId);
     std::string query;
     switch (kind) {
     case Kind::Albums:
-        query = "/Users/" + user + "/Items?IncludeItemTypes=MusicAlbum&Recursive=true&SortBy=SortName"
-                "&Fields=ChildCount&EnableTotalRecordCount=false";
+        query = "/Users/" + user + "/Items?IncludeItemTypes=MusicAlbum&Recursive=true"
+                "&Fields=ChildCount&EnableTotalRecordCount=false" + sortQuery(sort, false);
         break;
     case Kind::Artists:
-        query = "/Artists/AlbumArtists?UserId=" + user + "&SortBy=SortName&EnableTotalRecordCount=false";
+        query = "/Artists/AlbumArtists?UserId=" + user + "&EnableTotalRecordCount=false"
+                + sortQuery(sort == Sort::NameDesc ? sort : Sort::Name, false);
         break;
     case Kind::Playlists:
-        query = "/Users/" + user + "/Items?IncludeItemTypes=Playlist&Recursive=true&SortBy=SortName"
-                "&Fields=ChildCount&EnableTotalRecordCount=false";
+        query = "/Users/" + user + "/Items?IncludeItemTypes=Playlist&Recursive=true"
+                "&Fields=ChildCount&EnableTotalRecordCount=false" + sortQuery(sort, false);
         break;
     }
     const std::optional<std::string> body = get(query);
@@ -239,9 +260,7 @@ std::optional<std::vector<HostedSong>> JellyfinServer::songsOf(Kind kind, const 
     const std::string user = HttpClient::urlEncode(m_account.userId);
     const std::string common = "&IncludeItemTypes=Audio&Recursive=true&EnableTotalRecordCount=false";
     std::string query;
-    if (id.empty()) // every song
-        query = "/Users/" + user + "/Items?SortBy=SortName" + common;
-    else if (kind == Kind::Albums)
+    if (kind == Kind::Albums)
         query = "/Users/" + user + "/Items?ParentId=" + HttpClient::urlEncode(id)
                 + "&SortBy=ParentIndexNumber,IndexNumber,SortName" + common;
     else if (kind == Kind::Artists)
@@ -249,7 +268,11 @@ std::optional<std::vector<HostedSong>> JellyfinServer::songsOf(Kind kind, const 
                 + "&SortBy=Album,ParentIndexNumber,IndexNumber,SortName" + common;
     else // a playlist: in its own order
         query = "/Playlists/" + HttpClient::urlEncode(id) + "/Items?UserId=" + user;
+    return songList(query);
+}
 
+std::optional<std::vector<HostedSong>> JellyfinServer::songList(const std::string &query)
+{
     const std::optional<std::string> body = get(query);
     if (!body)
         return std::nullopt;

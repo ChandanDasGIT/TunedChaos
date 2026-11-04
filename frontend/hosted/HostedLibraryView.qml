@@ -122,6 +122,18 @@ Item {
             }
 
             ControlButton {
+                id: sortButton
+                iconName: "sortList"
+                iconSize: 13
+                readonly property string sort: SettingsController.hostedSorts[root.tab]
+                active: sort !== "name"
+                iconColor: active ? Theme.accent : Theme.textMuted
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Sort")
+                onClicked: sortMenu.popup(sortButton, 0, sortButton.height)
+            }
+
+            ControlButton {
                 iconName: "refresh"
                 iconSize: 12
                 iconColor: HostedController.busy ? Theme.accent : Theme.textMuted
@@ -266,6 +278,33 @@ Item {
                     onQueueRequested: HostedController.addToQueue(true, index)
                 }
             }
+        }
+    }
+
+    // The tab's ways to sort (what the server can do), the one in use checked
+    ThemedMenu {
+        id: sortMenu
+
+        Instantiator {
+            model: [[{ id: "name", text: qsTr("Title A–Z") }, { id: "nameDesc", text: qsTr("Title Z–A") },
+                     { id: "newest", text: qsTr("Newest added") }, { id: "oldest", text: qsTr("Oldest added") },
+                     { id: "artist", text: qsTr("Artist") }, { id: "album", text: qsTr("Album") }],
+                    [{ id: "name", text: qsTr("Name A–Z") }, { id: "nameDesc", text: qsTr("Name Z–A") },
+                     { id: "newest", text: qsTr("Newest added") }, { id: "oldest", text: qsTr("Oldest added") },
+                     { id: "artist", text: qsTr("Artist") }, { id: "year", text: qsTr("Year") }],
+                    [{ id: "name", text: qsTr("Name A–Z") }, { id: "nameDesc", text: qsTr("Name Z–A") }],
+                    [{ id: "name", text: qsTr("Name A–Z") }, { id: "nameDesc", text: qsTr("Name Z–A") },
+                     { id: "newest", text: qsTr("Newest added") }, { id: "oldest", text: qsTr("Oldest added") }]][root.tab]
+
+            delegate: Action {
+                required property var modelData
+                text: modelData.text
+                icon.name: SettingsController.hostedSorts[root.tab] === modelData.id ? "check" : ""
+                onTriggered: SettingsController.setHostedSort(root.tab, modelData.id)
+            }
+
+            onObjectAdded: (index, object) => sortMenu.insertAction(index, object)
+            onObjectRemoved: (index, object) => sortMenu.removeAction(object)
         }
     }
 

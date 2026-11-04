@@ -6,6 +6,7 @@
 #include "wrapper/files/files.h"
 #include "wrapper/player/playercontroller.h"
 #include "wrapper/playlist/playlistcontroller.h"
+#include "wrapper/settings/settingscontroller.h"
 
 #include <QJSEngine>
 
@@ -22,10 +23,12 @@ QString countText(int count)
 
 } // namespace
 
-HostedController::HostedController(PlayerController *player, PlaylistController *playlist, QObject *parent)
+HostedController::HostedController(PlayerController *player, PlaylistController *playlist,
+                                   SettingsController *settings, QObject *parent)
     : QObject(parent)
     , m_player(player)
     , m_playlist(playlist)
+    , m_settings(settings)
 {
     Q_ASSERT(!s_instance);
     s_instance = this;
@@ -36,6 +39,13 @@ HostedController::HostedController(PlayerController *player, PlaylistController 
     m_player->setHostedStore(m_store);
     m_pool.setMaxThreadCount(2);
     useAccount();
+
+    // A tab sorted differently: loaded again (the server sorts), shown ones at once
+    connect(m_settings, &SettingsController::hostedSortsChanged, this, [this] {
+        for (int tab = SongsTab; tab <= PlaylistsTab; ++tab)
+            if (m_loaded[tab])
+                refresh(tab);
+    });
 }
 
 HostedController::~HostedController()
@@ -178,10 +188,11 @@ void HostedController::load(int tab)
     if (!account)
         return;
 
+    const HostedServer::Sort sort = HostedServer::sortFromId(m_settings->hostedSorts().value(tab).toStdString());
     if (tab == SongsTab) {
-        runAsync([account = *account] {
+        runAsync([account = *account, sort] {
                      std::unique_ptr<HostedServer> server = HostedServer::open(account);
-                     auto songs = server ? server->songs() : std::nullopt;
+                     auto songs = server ? server->songs(sort) : std::nullopt;
                      return std::make_pair(songs, server ? server->lastError() : std::string("Unknown server"));
                  },
                  [this](const std::pair<std::optional<std::vector<HostedSong>>, std::string> &result) {
@@ -202,9 +213,9 @@ void HostedController::load(int tab)
 
     const auto kind = tab == AlbumsTab ? HostedServer::Kind::Albums
                     : tab == ArtistsTab ? HostedServer::Kind::Artists : HostedServer::Kind::Playlists;
-    runAsync([account = *account, kind] {
+    runAsync([account = *account, kind, sort] {
                  std::unique_ptr<HostedServer> server = HostedServer::open(account);
-                 auto list = server ? server->collections(kind) : std::nullopt;
+                 auto list = server ? server->collections(kind, sort) : std::nullopt;
                  return std::make_pair(list, server ? server->lastError() : std::string("Unknown server"));
              },
              [this, tab](const std::pair<std::optional<std::vector<HostedCollection>>, std::string> &result) {

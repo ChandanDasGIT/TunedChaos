@@ -13,8 +13,8 @@ public:
                                                const std::string &password, const std::string &deviceId,
                                                std::string &error);
 
-    std::optional<std::vector<HostedSong>> songs() override;
-    std::optional<std::vector<HostedCollection>> collections(Kind kind) override;
+    std::optional<std::vector<HostedSong>> songs(Sort sort) override;
+    std::optional<std::vector<HostedCollection>> collections(Kind kind, Sort sort) override;
     std::optional<std::vector<HostedSong>> songsOf(Kind kind, const std::string &id) override;
 
     std::string streamUrl(const std::string &songId) const override;
@@ -22,6 +22,7 @@ public:
 
 private:
     std::optional<std::string> get(const std::string &pathAndQuery); // the body, or nothing (m_error)
+    std::optional<std::vector<HostedSong>> songList(const std::string &query);
 
     HostedAccount m_account;
 };

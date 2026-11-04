@@ -18,7 +18,7 @@ Rectangle {
     property int tab: 0
     // What the panel shows: "" = the choice between the two libraries, "local" = the
     // songs on this device (tabs below), "hosted" = a music server (frontend/hosted)
-    property string source: ""
+    property string source: SettingsController.librarySource
     readonly property bool hasFolders: SettingsController.libraryFolders.length > 0
     readonly property bool inDetail: LocalLibraryController.detailKind !== 0 && (tab >= 1 && tab <= 3)
 
@@ -37,10 +37,10 @@ Rectangle {
         letterGrid.visible = false
     }
 
-    // Library opened: the choice between the two libraries again
+    // Library opened: the library picked last (the choice if none yet)
     function chooseSource() {
         letterGrid.visible = false
-        source = ""
+        source = SettingsController.librarySource
     }
 
     // The letter grid over a list (a letter header was tapped)
@@ -255,7 +255,10 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             visible: root.source === ""
-            onChosen: (source) => root.source = source
+            onChosen: (source) => {
+                root.source = source
+                SettingsController.librarySource = source // opens there next time
+            }
         }
 
         // ---- Hosted library (a music server)

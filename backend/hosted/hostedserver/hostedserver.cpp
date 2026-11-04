@@ -29,6 +29,17 @@ std::string HostedPath::songId(const std::string &path)
     return colon == std::string::npos ? std::string() : path.substr(colon + 1);
 }
 
+HostedServer::Sort HostedServer::sortFromId(const std::string &id)
+{
+    if (id == "nameDesc") return Sort::NameDesc;
+    if (id == "newest") return Sort::Newest;
+    if (id == "oldest") return Sort::Oldest;
+    if (id == "artist") return Sort::Artist;
+    if (id == "album") return Sort::Album;
+    if (id == "year") return Sort::Year;
+    return Sort::Name;
+}
+
 std::optional<HostedAccount> HostedServer::signIn(const std::string &kind, const std::string &serverUrl,
                                                   const std::string &userName, const std::string &password,
                                                   const std::string &deviceId, std::string &error)

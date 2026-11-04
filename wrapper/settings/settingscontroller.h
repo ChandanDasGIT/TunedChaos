@@ -104,6 +104,10 @@ class SettingsController : public QObject
     // The Library's Songs tab: "title", "titleDesc", "newest", "oldest", "modifiedNew",
     // "modifiedOld", "artist" or "album"
     Q_PROPERTY(QString librarySort READ librarySort WRITE setLibrarySort NOTIFY librarySortChanged)
+    // The library picked last in Library: "local", "hosted" ("" = none yet: the choice shows)
+    Q_PROPERTY(QString librarySource READ librarySource WRITE setLibrarySource NOTIFY librarySourceChanged)
+    // Hosted library: how each tab is sorted (songs, albums, artists, playlists)
+    Q_PROPERTY(QStringList hostedSorts READ hostedSorts NOTIFY hostedSortsChanged)
     // Library lists sorted by name get letter headers (# A..Z), tap one to jump to a letter
     Q_PROPERTY(bool letterGroups READ letterGroups WRITE setLetterGroups NOTIFY letterGroupsChanged)
     // Albums: "name", "nameDesc", "newest", "oldest", "modifiedNew", "modifiedOld", "artist" or "mostSongs"
@@ -245,6 +249,10 @@ public:
     QString defaultPanel() const;
     void setDefaultPanel(const QString &panel);
     QString librarySort() const;
+    QString librarySource() const;
+    void setLibrarySource(const QString &source);
+    QStringList hostedSorts() const;
+    Q_INVOKABLE void setHostedSort(int tab, const QString &sort);
     bool letterGroups() const;
     void setLetterGroups(bool enabled);
     void setLibrarySort(const QString &sort);
@@ -329,6 +337,8 @@ signals:
     void libraryExcludedChanged();
     void librarySortChanged();
     void letterGroupsChanged();
+    void librarySourceChanged();
+    void hostedSortsChanged();
     void panelsChanged();
     void navDividersChanged();
     void startPanelChanged();

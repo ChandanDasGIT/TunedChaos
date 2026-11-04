@@ -70,6 +70,8 @@ constexpr const char *AppUpdateSkippedKey = "updates.skippedVersion";
 constexpr const char *YtQueueMixKey = "youtube.queueMix";
 constexpr const char *ListsToQueueKey = "playback.listsToQueue";
 constexpr const char *LetterGroupsKey = "library.letterGroups";
+constexpr const char *LibrarySourceKey = "library.source";
+constexpr const char *HostedSortKey = "hosted.sort"; // + ".<tab>"
 constexpr const char *YtSearchHistoryKey = "youtube.searchHistory";
 constexpr const char *YtQualityKey = "youtube.quality";
 constexpr const char *EqEnabledKey = "eq.enabled";
@@ -908,6 +910,38 @@ void SettingsController::setYtQueueMix(bool enabled)
     m_settings->setBool(YtQueueMixKey, enabled);
     scheduleSave();
     emit ytQueueMixChanged();
+}
+
+QString SettingsController::librarySource() const
+{
+    const QString source = QString::fromStdString(m_settings->value(LibrarySourceKey, ""));
+    return source == QLatin1String("local") || source == QLatin1String("hosted") ? source : QString();
+}
+
+void SettingsController::setLibrarySource(const QString &source)
+{
+    if (source == librarySource())
+        return;
+    m_settings->setValue(LibrarySourceKey, source.toStdString());
+    scheduleSave();
+    emit librarySourceChanged();
+}
+
+QStringList SettingsController::hostedSorts() const
+{
+    QStringList sorts;
+    for (int tab = 0; tab < 4; ++tab)
+        sorts << QString::fromStdString(m_settings->value(std::string(HostedSortKey) + '.' + std::to_string(tab), "name"));
+    return sorts;
+}
+
+void SettingsController::setHostedSort(int tab, const QString &sort)
+{
+    if (tab < 0 || tab > 3 || hostedSorts().value(tab) == sort)
+        return;
+    m_settings->setValue(std::string(HostedSortKey) + '.' + std::to_string(tab), sort.toStdString());
+    scheduleSave();
+    emit hostedSortsChanged();
 }
 
 bool SettingsController::letterGroups() const

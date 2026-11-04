@@ -13,6 +13,7 @@
 class HostedStore;
 class PlayerController;
 class PlaylistController;
+class SettingsController;
 class QJSEngine;
 class QQmlEngine;
 struct HostedSong;
@@ -49,7 +50,8 @@ public:
     enum Tab { SongsTab, AlbumsTab, ArtistsTab, PlaylistsTab };
     Q_ENUM(Tab)
 
-    HostedController(PlayerController *player, PlaylistController *playlist, QObject *parent);
+    HostedController(PlayerController *player, PlaylistController *playlist, SettingsController *settings,
+                     QObject *parent);
     ~HostedController() override;
 
     static HostedController *create(QQmlEngine *qmlEngine, QJSEngine *jsEngine);
@@ -99,6 +101,7 @@ private:
 
     PlayerController *m_player;
     PlaylistController *m_playlist;
+    SettingsController *m_settings;
     std::shared_ptr<HostedStore> m_store;
 
     QString m_accountId, m_serverName, m_userName;

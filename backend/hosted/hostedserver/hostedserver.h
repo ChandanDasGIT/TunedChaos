@@ -66,6 +66,9 @@ class HostedServer
 {
 public:
     enum class Kind { Albums, Artists, Playlists };
+    // How a list comes back (a kind of server may ignore what it can't do)
+    enum class Sort { Name, NameDesc, Newest, Oldest, Artist, Album, Year };
+    static Sort sortFromId(const std::string &id); // "name", "nameDesc", "newest"... (unknown: Name)
 
     virtual ~HostedServer() = default;
 
@@ -78,8 +81,8 @@ public:
     static std::unique_ptr<HostedServer> open(const HostedAccount &account);
 
     // Blocking (call from worker threads). Nothing on failure: lastError() says why.
-    virtual std::optional<std::vector<HostedSong>> songs() = 0;
-    virtual std::optional<std::vector<HostedCollection>> collections(Kind kind) = 0;
+    virtual std::optional<std::vector<HostedSong>> songs(Sort sort) = 0;
+    virtual std::optional<std::vector<HostedCollection>> collections(Kind kind, Sort sort) = 0;
     virtual std::optional<std::vector<HostedSong>> songsOf(Kind kind, const std::string &id) = 0;
 
     // Addresses (no network): the song's audio as stored, a picture at about `size` pixels.
