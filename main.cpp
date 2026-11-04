@@ -40,6 +40,7 @@
 
 #include <QDir>
 #include <QEventLoop>
+#include <QJniObject>
 #include <QFile>
 #include <QTimer>
 #include <QQmlContext>
@@ -272,6 +273,12 @@ int main(int argc, char *argv[])
     const int result = app.exec();
     if (restart) {
         settings.flush();
+#ifdef Q_OS_ANDROID
+        // Android: a helper ends this process and opens the app again.
+        QJniObject::callStaticMethod<void>("io/github/chandandasgit/tunedchaos/RestartActivity", "restart",
+                                           "(Landroid/content/Context;)V",
+                                           QNativeInterface::QAndroidApplication::context());
+#else
         instance.stop(); // the new copy must not hand over to this one
         QProcess process;
         process.setProgram(QCoreApplication::applicationFilePath());
@@ -282,6 +289,7 @@ int main(int argc, char *argv[])
             process.setProcessEnvironment(environment);
         }
         process.startDetached();
+#endif
     }
     return result;
 }

@@ -60,6 +60,14 @@
                 android:value="true" />
         </activity>
 
+        <!-- Starts the app again (Interface size), from a process of its own -->
+        <activity
+            android:name="io.github.chandandasgit.tunedchaos.RestartActivity"
+            android:process=":restart"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:exported="false" />
+
         <!-- Keeps the app playing in the background, with the media notification -->
         <service
             android:name="io.github.chandandasgit.tunedchaos.MediaPlaybackService"

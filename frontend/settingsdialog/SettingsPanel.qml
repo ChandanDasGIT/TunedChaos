@@ -741,19 +741,14 @@ Rectangle {
                                 }
                             }
 
-                            // (Not on Android: the system's display size does this, and an app can't restart itself)
                             SettingsRow {
                                 Layout.fillWidth: true
-                                readonly property bool hiddenHere: root.android
-                                visible: !hiddenHere
                                 title: qsTr("Interface size")
                                 description: qsTr("Makes everything bigger or smaller: text, buttons, panels. Takes effect when the app starts again.")
                             }
 
                             Flow {
                                 Layout.fillWidth: true
-                                readonly property bool hiddenHere: root.android
-                                visible: !hiddenHere
                                 spacing: 6
 
                                 Repeater {
@@ -773,9 +768,7 @@ Rectangle {
                             // Shown once the chosen size differs from the one in use
                             RowLayout {
                                 Layout.fillWidth: true
-                                readonly property bool hiddenHere: root.android
-                                visible: !hiddenHere
-                                         && Math.abs(SettingsController.interfaceScale - SettingsController.activeInterfaceScale) > 0.01
+                                visible: Math.abs(SettingsController.interfaceScale - SettingsController.activeInterfaceScale) > 0.01
                                 spacing: Theme.spacing
 
                                 Label {
