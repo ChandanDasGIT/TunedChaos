@@ -226,6 +226,13 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     engine.addImageProvider(QStringLiteral("albumart"), new AlbumArtProvider); // engine takes ownership
     engine.rootContext()->setContextProperty(QStringLiteral("AppUpdater"), &appUpdater);
+    // Windows: the update installs once the app has closed, then starts it again
+    QObject::connect(&appUpdater, &AppUpdater::quitRequested, &app, [&engine] {
+        if (!engine.rootObjects().isEmpty())
+            QMetaObject::invokeMethod(engine.rootObjects().constFirst(), "quitApp");
+        else
+            QCoreApplication::quit();
+    });
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed,
         &app, [] { QCoreApplication::exit(-1); },

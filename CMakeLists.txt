@@ -215,7 +215,7 @@ elseif(CMP_PLATFORM STREQUAL "windows")
     target_sources(TunedChaos PRIVATE
         wrapper/notifications/notificationcontroller_windows.cpp
         wrapper/systemmedia/systemmedia_windows.cpp
-        wrapper/update/appupdater_other.cpp
+        wrapper/update/appupdater_windows.cpp
         # Icon, and the manifest: UTF-8 as the text encoding (see release/README.md)
         release/windows/TunedChaos.rc
         release/windows/TunedChaos.manifest

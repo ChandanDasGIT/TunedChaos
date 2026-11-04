@@ -12,7 +12,8 @@ class SettingsController;
 // and, if asked to, downloads it and installs it the way this copy of the app
 // was installed (appupdater_<platform>.cpp): Android's installer for the APK;
 // on Linux the AppImage is swapped, or the tarball's install-app.sh run, then
-// the app restarts. Other kinds (Flatpak, Windows for now, own builds) only
+// the app restarts; on Windows the new setup or portable ZIP is installed once
+// the app has closed, and the app started again. Other kinds (Flatpak, Windows for now, own builds) only
 // tell about it, with the release's page. A check that fails stays silent:
 // being offline is normal. A download carries on from where it stopped.
 class AppUpdater : public QObject
@@ -50,6 +51,7 @@ signals:
     void installStarted();
     void stateChanged();
     void progressChanged();
+    void quitRequested(); // Windows: the update installs once the app has closed
 
 private:
     void continueInstall();
@@ -78,5 +80,8 @@ bool readyToInstall();    // Android: only the app on screen may open the instal
 // Installs `file`: "" when done (or handed to the system's installer), else what went wrong.
 // `restart`: the app must start again to use it.
 QString install(const QString &file, bool &restart);
+// Windows: the install runs once the app has closed (true: it's started; quit
+// now, it starts the app again). Elsewhere false: the app restarts itself.
+bool startPendingInstall();
 
 } // namespace UpdatePlatform

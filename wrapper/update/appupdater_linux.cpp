@@ -58,6 +58,8 @@ bool UpdatePlatform::installAllowed() { return true; }
 bool UpdatePlatform::openPermissionSettings() { return true; }
 bool UpdatePlatform::readyToInstall() { return true; }
 
+bool UpdatePlatform::startPendingInstall() { return false; }
+
 QString UpdatePlatform::install(const QString &file, bool &restart)
 {
     restart = true;

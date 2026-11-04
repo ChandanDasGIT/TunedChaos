@@ -159,7 +159,10 @@ void AppUpdater::openDownloadPage()
 
 void AppUpdater::restartNow()
 {
-    m_settings->restartApp(); // (main starts the new version)
+    if (UpdatePlatform::startPendingInstall())
+        emit quitRequested(); // (it starts the app again once installed)
+    else
+        m_settings->restartApp(); // (main starts the new version)
 }
 
 void AppUpdater::skipThisVersion()

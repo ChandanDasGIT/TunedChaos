@@ -43,6 +43,8 @@ bool UpdatePlatform::readyToInstall()
     return QGuiApplication::applicationState() == Qt::ApplicationActive;
 }
 
+bool UpdatePlatform::startPendingInstall() { return false; }
+
 QString UpdatePlatform::install(const QString &file, bool &restart)
 {
     restart = false; // Android's installer replaces and restarts the app itself

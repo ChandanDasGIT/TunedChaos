@@ -62,7 +62,8 @@ Popup {
         Label {
             Layout.fillWidth: true
             text: root.needsPermission ? qsTr("Allow installing")
-                : root.installed ? qsTr("Version %1 is installed").arg(root.version)
+                : root.installed ? (Qt.platform.os === "windows" ? qsTr("Version %1 is ready").arg(root.version)
+                                                                 : qsTr("Version %1 is installed").arg(root.version))
                 : root.downloading ? qsTr("Downloading version %1").arg(root.version)
                 : qsTr("Update available")
             color: Theme.text
@@ -76,7 +77,9 @@ Popup {
             visible: !root.downloading
             text: root.needsPermission
                   ? qsTr("Android asks you to allow Tuned Chaos under “Install unknown apps”. Turn it on and come back: the update then installs.")
-                  : root.installed ? qsTr("Restart the app to use it. The song you're playing picks up where it was.")
+                  : root.installed ? (Qt.platform.os === "windows"
+                                      ? qsTr("Restart now: the app closes, installs it and starts again.")
+                                      : qsTr("Restart the app to use it. The song you're playing picks up where it was."))
                   : root.canInstall ? qsTr("Version %1 is available. You have version %2.").arg(root.version).arg(Qt.application.version)
                   : qsTr("Version %1 is available. You have version %2. Get it from its download page.")
                     .arg(root.version).arg(Qt.application.version)
