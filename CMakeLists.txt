@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(TunedChaos VERSION 1.1.4 LANGUAGES CXX)
+project(TunedChaos VERSION 1.1.5 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -179,7 +179,7 @@ target_link_libraries(backend PRIVATE
 qt_add_library(chaoticstyle STATIC)
 qt_add_qml_module(chaoticstyle
     URI ChaoticStyle
-    VERSION 1.1.4
+    VERSION 1.1.5
     OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml/ChaoticStyle
     QML_FILES
         frontend/style/ToolTip.qml
@@ -238,7 +238,7 @@ elseif(CMP_PLATFORM STREQUAL "android")
         QT_ANDROID_COMPILE_SDK_VERSION 36 # (androidx.core 1.17 needs it)
         QT_ANDROID_SDK_BUILD_TOOLS_REVISION 36.0.0
         QT_ANDROID_VERSION_NAME ${PROJECT_VERSION}
-        QT_ANDROID_VERSION_CODE 7
+        QT_ANDROID_VERSION_CODE 8
     )
 endif()
 
@@ -254,7 +254,7 @@ set_source_files_properties(frontend/dragdrop/SongDrag.qml PROPERTIES
 
 qt_add_qml_module(TunedChaos
     URI TunedChaos
-    VERSION 1.1.4
+    VERSION 1.1.5
     # Keep the module's build output out of the way of the executable,
     # which has the same name.
     OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml/TunedChaos
