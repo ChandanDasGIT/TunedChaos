@@ -57,6 +57,8 @@ Rectangle {
     function back() {
         if (letterGrid.visible)
             letterGrid.visible = false
+        else if (source === "hosted" && HostedController.detailOpen)
+            HostedController.closeDetail()
         else if (inDetail)
             LocalLibraryController.closeDetail()
         else if (source === "local" && tab === 4 && hasFolders && LocalLibraryController.folder !== "")

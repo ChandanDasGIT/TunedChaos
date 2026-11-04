@@ -52,11 +52,11 @@ void NotificationController::notify()
 QString NotificationController::saveCover(const QString &path, const QString &thumbnail)
 {
     std::vector<unsigned char> bytes;
-    if (!thumbnail.isEmpty() && thumbnail.startsWith(QLatin1String("https://"))) {
+    if (thumbnail.startsWith(QLatin1String("https://")) || thumbnail.startsWith(QLatin1String("http://"))) {
         const HttpResponse response = HttpClient::get(thumbnail.toStdString(), {}, 10000);
         if (response.ok())
             bytes.assign(response.body.begin(), response.body.end());
-    } else if (!path.isEmpty() && !StreamResolver::isYouTube(path.toStdString())) {
+    } else if (!path.isEmpty() && !StreamResolver::isRemote(path.toStdString())) {
         bytes = CoverController::coverBytes(path.toStdString()); // embedded, or found online
     }
     if (bytes.empty())

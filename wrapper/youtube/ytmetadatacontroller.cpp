@@ -4,6 +4,7 @@
 #include "backend/library/metadata/metadata.h"
 #include "backend/library/track/track.h"
 #include "backend/youtube/ytmatcher/ytmatcher.h"
+#include "backend/youtube/streamresolver/streamresolver.h"
 #include "backend/youtube/ytmetadatastore/ytmetadatastore.h"
 #include "wrapper/player/playercontroller.h"
 #include "wrapper/playlist/playlistcontroller.h"
@@ -69,7 +70,7 @@ YtMetadataController *YtMetadataController::create(QQmlEngine *, QJSEngine *)
 // A file on disk (not a YouTube "ytmusic:" source).
 bool YtMetadataController::isLocal(const QString &path)
 {
-    return !path.isEmpty() && !path.startsWith(QStringLiteral("ytmusic:"));
+    return !path.isEmpty() && !StreamResolver::isRemote(path.toStdString());
 }
 
 bool YtMetadataController::enabled() const

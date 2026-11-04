@@ -128,7 +128,7 @@ Popup {
     }
 
     // ---- Editing the tags
-    readonly property bool canEdit: path !== "" && !path.startsWith("ytmusic:")
+    readonly property bool canEdit: path !== "" && !path.startsWith("ytmusic:") && !path.startsWith("hosted:")
     property bool editing: false
     onEditingChanged: if (!editing) Qt.inputMethod.hide()
     property bool saving: false

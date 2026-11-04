@@ -117,6 +117,8 @@ QString PlayerController::title() const
 {
     if (StreamResolver::isYouTube(m_source.toStdString()))
         return tr("YouTube track");
+    if (StreamResolver::isHosted(m_source.toStdString()))
+        return tr("Server song");
     return QFileInfo(m_source).completeBaseName();
 }
 
@@ -255,6 +257,11 @@ void PlayerController::setLoudnessStore(std::shared_ptr<const LoudnessStore> sto
     m_player->setLoudnessStore(std::move(store));
 }
 
+void PlayerController::setHostedStore(std::shared_ptr<const HostedStore> store)
+{
+    m_resolver->setHostedStore(std::move(store));
+}
+
 void PlayerController::loudnessMeasured(const QString &path)
 {
     m_player->refreshReplayGain(path.toStdString()); // (the player checks it is the one decoding)
@@ -289,7 +296,7 @@ void PlayerController::updateQuality()
             if (!info.codecName.empty())
                 parts << QString::fromStdString(info.codecName);
 
-            const bool stream = StreamResolver::isYouTube(path.toStdString());
+            const bool stream = StreamResolver::isRemote(path.toStdString());
             details = {{QStringLiteral("codec"), QString::fromStdString(info.codec)},
                        {QStringLiteral("sampleRate"), info.sampleRate},
                        {QStringLiteral("bitsPerSample"), info.bitsPerSample},

@@ -1,5 +1,8 @@
 #include "backend/youtube/streamresolver/streamresolver.h"
 
+#include "backend/hosted/hostedserver/hostedserver.h"
+#include "backend/hosted/hostedstore/hostedstore.h"
+
 #include "backend/youtube/ytdlp/ytdlp.h"
 
 #include <chrono>
@@ -51,6 +54,22 @@ bool StreamResolver::isYouTube(const std::string &path)
     return path.rfind(Prefix, 0) == 0;
 }
 
+bool StreamResolver::isHosted(const std::string &path)
+{
+    return HostedPath::is(path);
+}
+
+bool StreamResolver::isRemote(const std::string &path)
+{
+    return isYouTube(path) || isHosted(path);
+}
+
+void StreamResolver::setHostedStore(std::shared_ptr<const HostedStore> store)
+{
+    std::lock_guard lock(m_mutex);
+    m_hosted = std::move(store);
+}
+
 std::string StreamResolver::videoId(const std::string &path)
 {
     return isYouTube(path) ? path.substr(std::string(Prefix).size()) : std::string();
@@ -63,6 +82,20 @@ std::string StreamResolver::pathFor(const std::string &videoId)
 
 std::optional<std::string> StreamResolver::resolve(const std::string &path)
 {
+    if (isHosted(path)) { // a server's song: its address is known without asking
+        std::shared_ptr<const HostedStore> hosted;
+        {
+            std::lock_guard lock(m_mutex);
+            hosted = m_hosted;
+        }
+        const std::string url = hosted ? hosted->streamUrl(path) : std::string();
+        if (url.empty()) {
+            std::lock_guard lock(m_mutex);
+            m_lastError = "This song's server isn't signed in any more (Library > Hosted library)";
+            return std::nullopt;
+        }
+        return url;
+    }
     if (!isYouTube(path))
         return path;
     const std::string id = videoId(path);

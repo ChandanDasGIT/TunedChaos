@@ -73,6 +73,6 @@ void SessionController::restore()
     if (m_playlist->resumeInQueue(path, position))
         return;
     // In neither list any more (e.g. the Queue was cleared): a local file still opens on its own.
-    if (!StreamResolver::isYouTube(path.toStdString()) && QFileInfo::exists(path))
+    if (!StreamResolver::isRemote(path.toStdString()) && QFileInfo::exists(path))
         m_playlist->resumeAlone(Metadata::read(path.toStdString()), position);
 }

@@ -80,7 +80,7 @@ void CoverController::onSourceChanged()
     m_currentSource.clear();
     m_searching = false;
     emit currentChanged();
-    if (path.isEmpty() || StreamResolver::isYouTube(path.toStdString()))
+    if (path.isEmpty() || StreamResolver::isRemote(path.toStdString()))
         return; // YouTube songs come with their own picture
 
     std::string ytThumbnail, ytAlbum;

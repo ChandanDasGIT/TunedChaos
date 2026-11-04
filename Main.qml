@@ -1303,6 +1303,11 @@ ApplicationWindow {
         function onNotice(text) { toast.show(text) }
     }
 
+    Connections {
+        target: HostedController
+        function onNotice(text) { toast.show(text) }
+    }
+
     Toast {
         id: toast
         bottomOffset: Theme.padding * 1.5 + window.safeBottom

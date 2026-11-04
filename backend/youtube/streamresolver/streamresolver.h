@@ -2,6 +2,8 @@
 
 #include "backend/youtube/ytdlp/ytdlp.h"
 
+#include <memory>
+
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
@@ -11,6 +13,8 @@
 #include <string>
 #include <thread>
 #include <unordered_map>
+
+class HostedStore;
 
 // Turns playlist paths of YouTube tracks ("ytmusic:<videoId>") into direct
 // audio stream addresses (via yt-dlp). Addresses are cached until shortly
@@ -28,6 +32,10 @@ public:
     StreamResolver &operator=(const StreamResolver &) = delete;
 
     static bool isYouTube(const std::string &path);
+    static bool isHosted(const std::string &path); // a music server's song ("hosted:...")
+    static bool isRemote(const std::string &path); // not a file on this device: YouTube or a server
+    // Where "hosted:" songs stream from (the servers signed in to).
+    void setHostedStore(std::shared_ptr<const HostedStore> store);
     static std::string videoId(const std::string &path);
     static std::string pathFor(const std::string &videoId);
 
@@ -56,6 +64,7 @@ private:
     std::set<std::string> m_resolving;               // videoIds being resolved right now
     std::deque<std::string> m_prefetchQueue;
     std::string m_cookiesBrowser;
+    std::shared_ptr<const HostedStore> m_hosted;
     YtDlp::AudioQuality m_quality = YtDlp::AudioQuality::Best;
     std::string m_lastError;
     int64_t m_limitedUntil = 0; // unix seconds: no background prefetches before this

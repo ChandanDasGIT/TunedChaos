@@ -87,6 +87,12 @@ add_library(backend STATIC
     backend/audioengine/spectrum/spectrum.h
     backend/library/coverfinder/coverfinder.cpp
     backend/library/coverfinder/coverfinder.h
+    backend/hosted/hostedserver/hostedserver.cpp
+    backend/hosted/hostedserver/hostedserver.h
+    backend/hosted/hostedstore/hostedstore.cpp
+    backend/hosted/hostedstore/hostedstore.h
+    backend/hosted/jellyfin/jellyfin.cpp
+    backend/hosted/jellyfin/jellyfin.h
     backend/library/letterindex/letterindex.cpp
     backend/library/letterindex/letterindex.h
     backend/library/metadata/metadata.cpp
@@ -260,6 +266,8 @@ qt_add_qml_module(TunedChaos
         wrapper/locallibrary/librarysongsmodel.h
         wrapper/locallibrary/locallibrarycontroller.cpp
         wrapper/locallibrary/locallibrarycontroller.h
+        wrapper/hosted/hostedcontroller.cpp
+        wrapper/hosted/hostedcontroller.h
         wrapper/loudness/loudnesscontroller.cpp
         wrapper/loudness/loudnesscontroller.h
         wrapper/lyrics/lyricscontroller.cpp
@@ -332,6 +340,7 @@ qt_add_qml_module(TunedChaos
         frontend/library/LibraryAddAllMenu.qml
         frontend/library/LibrarySongMenu.qml
         frontend/hosted/HostedLibraryView.qml
+        frontend/hosted/HostedRow.qml
         frontend/library/LetterHeader.qml
         frontend/library/LetterJumpGrid.qml
         frontend/library/LibrarySongRow.qml
@@ -375,6 +384,7 @@ target_include_directories(TunedChaos PRIVATE
     wrapper/albumart
     wrapper/files
     wrapper/history
+    wrapper/hosted
     wrapper/library
     wrapper/locallibrary
     wrapper/loudness

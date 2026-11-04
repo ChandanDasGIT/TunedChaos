@@ -4,6 +4,7 @@
 #include "backend/library/track/track.h"
 #include "backend/loudness/loudnessmeter/loudnessmeter.h"
 #include "backend/loudness/loudnessstore/loudnessstore.h"
+#include "backend/youtube/streamresolver/streamresolver.h"
 #include "wrapper/files/files.h"
 #include "wrapper/locallibrary/locallibrarycontroller.h"
 #include "wrapper/player/playercontroller.h"
@@ -21,7 +22,7 @@ constexpr int SaveEvery = 10; // results written to disk every so many (and on e
 
 bool isLocal(const QString &path)
 {
-    return !path.isEmpty() && !path.startsWith(QStringLiteral("ytmusic:"));
+    return !path.isEmpty() && !StreamResolver::isRemote(path.toStdString());
 }
 
 } // namespace

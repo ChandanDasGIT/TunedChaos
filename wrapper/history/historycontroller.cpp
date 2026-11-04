@@ -378,7 +378,7 @@ void HistoryController::playList(const QString &which, int index)
     for (const QVariant &entry : list) {
         const QVariantMap song = entry.toMap();
         const std::string path = song.value(QStringLiteral("path")).toString().toStdString();
-        if ((StreamResolver::isYouTube(path) || QFileInfo::exists(qs(path))) && seen.insert(path).second)
+        if ((StreamResolver::isRemote(path) || QFileInfo::exists(qs(path))) && seen.insert(path).second)
             tracks.push_back(trackOf(song));
     }
     const std::string clicked = list.value(index).toMap().value(QStringLiteral("path")).toString().toStdString();
@@ -405,7 +405,7 @@ void HistoryController::playMix()
     for (const auto &[path, n] : ranked) {
         if (int(tracks.size()) >= MixCount)
             break;
-        if (!StreamResolver::isYouTube(path) && !QFileInfo::exists(qs(path)))
+        if (!StreamResolver::isRemote(path) && !QFileInfo::exists(qs(path)))
             continue;
         tracks.push_back(trackOf(songOf(*latest[path])));
         seen.insert(path);

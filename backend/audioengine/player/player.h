@@ -40,7 +40,8 @@ class StreamResolver;
 // or is cut. With setSkipFade(true), load() while playing fades the old track
 // out briefly and the new one in, instead of cutting.
 //
-// Paths are files, or YouTube tracks ("ytmusic:<id>") which the optional
+// Paths are files, YouTube tracks ("ytmusic:<id>") or music server songs
+// ("hosted:<account>:<id>"), which the optional
 // StreamResolver turns into stream addresses; the path stays the track's
 // identity in every callback.
 class Player

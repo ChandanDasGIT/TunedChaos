@@ -10,6 +10,7 @@
 
 #include <memory>
 
+class HostedStore;
 class LoudnessStore;
 class Player;
 class SpectrumAnalyzer;
@@ -59,6 +60,8 @@ public:
 
     // Measured loudness for songs without ReplayGain tags (LoudnessController's)
     void setLoudnessStore(std::shared_ptr<const LoudnessStore> store);
+    // The music servers signed in to (HostedController's): where their songs stream from
+    void setHostedStore(std::shared_ptr<const HostedStore> store);
     // That song's loudness was just measured: if it is playing, its gain is
     // eased in and its details are read again.
     void loudnessMeasured(const QString &path);

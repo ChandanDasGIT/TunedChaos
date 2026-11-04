@@ -4,6 +4,7 @@
 #include "wrapper/files/files.h"
 #include "wrapper/history/historycontroller.h"
 #include "wrapper/library/librarycontroller.h"
+#include "wrapper/hosted/hostedcontroller.h"
 #include "wrapper/locallibrary/locallibrarycontroller.h"
 #include "wrapper/loudness/loudnesscontroller.h"
 #include "wrapper/lyrics/lyricscontroller.h"
@@ -162,6 +163,8 @@ int main(int argc, char *argv[])
     PlaylistsController playlists(&playlist, &player, &settings, nullptr);
     MoodsController moods(&playlist, &player, nullptr);
     LocalLibraryController localLibrary(&playlist, &playlists, &ytMetadata, &settings, nullptr);
+    // Library > Hosted library: music servers (Jellyfin)
+    HostedController hosted(&player, &playlist, nullptr);
     // Measures library songs without ReplayGain tags (while ReplayGain is on)
     LoudnessController loudness(&player, &playlist, &localLibrary, &settings, nullptr);
     // Reopen the last song, paused where it was (Settings > General).

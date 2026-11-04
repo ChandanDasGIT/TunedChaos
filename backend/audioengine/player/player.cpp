@@ -231,7 +231,7 @@ void Player::handle(const Command &command)
     }
 
     case CommandType::RefreshGain:
-        if (command.path == m_decodingPath && !StreamResolver::isYouTube(command.path)) {
+        if (command.path == m_decodingPath && !StreamResolver::isRemote(command.path)) {
             m_decodingGain = replayGainFor(command.path);
             constexpr uint64_t EaseFrames = Decoder::OutputRate; // a second
             m_gainStep = (float(replayGainFactor()) - m_gainFactor) / float(EaseFrames);
@@ -283,14 +283,14 @@ bool Player::openPath(Decoder &decoder, const std::string &path)
 {
     if (&decoder == m_decoder.get()) {
         m_decodedFrames = 0;
-        // (YouTube songs have no tags to read, and aren't measured.)
-        m_decodingGain = StreamResolver::isYouTube(path) ? ReplayGain{} : replayGainFor(path);
+        // (YouTube and server songs have no tags to read here, and aren't measured.)
+        m_decodingGain = StreamResolver::isRemote(path) ? ReplayGain{} : replayGainFor(path);
         m_decodingPath = path;
         m_gainFactor = float(replayGainFactor()); // a new file starts at its own level
         m_gainRampLeft = 0;
     }
     std::optional<std::string> source = path;
-    if (m_resolver && StreamResolver::isYouTube(path)) {
+    if (m_resolver && StreamResolver::isRemote(path)) {
         source = m_resolver->resolve(path);
         if (!source) {
             decoder.close();
