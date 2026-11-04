@@ -561,6 +561,19 @@ Rectangle {
                                 font.pixelSize: Theme.fontSizeSmall
                                 wrapMode: Text.WordWrap
                             }
+
+                            SettingsRow {
+                                Layout.fillWidth: true
+                                title: qsTr("Play lists in the Queue")
+                                description: SettingsController.listsToQueue
+                                    ? qsTr("Playing an album, artist, playlist or YouTube song adds it to the end of the Queue, so you always see what plays next. A YouTube Mix keeps adding to the Queue.")
+                                    : qsTr("Playing an album, artist, playlist or YouTube song plays it on its own; the Queue stays as it is.")
+
+                                SettingsSwitch {
+                                    checked: SettingsController.listsToQueue
+                                    onToggled: SettingsController.listsToQueue = checked
+                                }
+                            }
                         }
 
                         SettingsCard {

@@ -72,6 +72,9 @@ class SettingsController : public QObject
     Q_PROPERTY(bool ytAutoplay READ ytAutoplay WRITE setYtAutoplay NOTIFY ytAutoplayChanged)
     // When the Queue ends on a YouTube song: continue with its Mix.
     Q_PROPERTY(bool ytQueueMix READ ytQueueMix WRITE setYtQueueMix NOTIFY ytQueueMixChanged)
+    // Playing a list (album, artist, playlist, YouTube...) adds it to the end of the Queue
+    // instead of playing it on its own, out of sight; a Mix after it grows the Queue too.
+    Q_PROPERTY(bool listsToQueue READ listsToQueue WRITE setListsToQueue NOTIFY listsToQueueChanged)
     // YouTube Music searches you used, newest first (kept on this computer only).
     Q_PROPERTY(QStringList ytSearchHistory READ ytSearchHistory NOTIFY ytSearchHistoryChanged)
     Q_PROPERTY(YtQuality ytQuality READ ytQuality WRITE setYtQuality NOTIFY ytQualityChanged)
@@ -208,6 +211,8 @@ public:
     void setAppUpdateSkipped(const QString &version);
     bool ytQueueMix() const;
     void setYtQueueMix(bool enabled);
+    bool listsToQueue() const;
+    void setListsToQueue(bool enabled);
     bool eqEnabled() const;
     void setEqEnabled(bool enabled);
     QList<qreal> eqGains() const;
@@ -306,6 +311,7 @@ signals:
     void appUpdateCheckChanged();
     void appUpdateSkippedChanged();
     void ytQueueMixChanged();
+    void listsToQueueChanged();
     void ytSearchHistoryChanged();
     void ytQualityChanged();
     void eqChanged();

@@ -68,6 +68,7 @@ constexpr const char *YtAutoplayKey = "youtube.autoplay";
 constexpr const char *AppUpdateCheckKey = "updates.check";
 constexpr const char *AppUpdateSkippedKey = "updates.skippedVersion";
 constexpr const char *YtQueueMixKey = "youtube.queueMix";
+constexpr const char *ListsToQueueKey = "playback.listsToQueue";
 constexpr const char *YtSearchHistoryKey = "youtube.searchHistory";
 constexpr const char *YtQualityKey = "youtube.quality";
 constexpr const char *EqEnabledKey = "eq.enabled";
@@ -906,6 +907,20 @@ void SettingsController::setYtQueueMix(bool enabled)
     m_settings->setBool(YtQueueMixKey, enabled);
     scheduleSave();
     emit ytQueueMixChanged();
+}
+
+bool SettingsController::listsToQueue() const
+{
+    return m_settings->boolValue(ListsToQueueKey, false);
+}
+
+void SettingsController::setListsToQueue(bool enabled)
+{
+    if (enabled == listsToQueue())
+        return;
+    m_settings->setBool(ListsToQueueKey, enabled);
+    scheduleSave();
+    emit listsToQueueChanged();
 }
 
 bool SettingsController::eqEnabled() const

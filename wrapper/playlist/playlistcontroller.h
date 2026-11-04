@@ -182,6 +182,10 @@ private:
     void onTrackFinished();
     void activateQueue();      // back to playing from the Queue
     void setQueueCustomOrder(); // the Queue is no longer sorted by a column
+    // Settings > Playback > Lists go to the Queue: the list is added to the end of the
+    // Queue (in its own order, songs already there stay put) and its startIndex song plays.
+    void enqueueList(const std::vector<::Track> &tracks, int startIndex, bool endless);
+    int appendInOrder(const std::vector<::Track> &tracks); // songs added
 
     static inline PlaylistController *s_instance = nullptr;
 
@@ -196,6 +200,7 @@ private:
     bool m_contextEndless = false; // a Mix: topped up from YouTube
     bool m_moreRequested = false;  // moreWanted sent, no answer yet (or nothing new came)
     int m_moreFailures = 0;        // failed answers in a row
+    bool m_queueMix = false;       // the Queue's YouTube Mix goes on after it (a Mix sent to the Queue)
     bool m_waitingForMore = false; // the music ran out before the answer came
     std::vector<::Track> m_followUp; // the Mix after the Queue's last song
     QString m_followUpTitle;

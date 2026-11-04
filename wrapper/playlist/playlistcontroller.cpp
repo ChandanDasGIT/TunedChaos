@@ -188,13 +188,47 @@ void PlaylistController::placeNext(Playlist &list, const ::Track &track, int pla
 
 void PlaylistController::playFromList(std::vector<::Track> tracks, int startIndex)
 {
+    if (m_settings->listsToQueue()) {
+        enqueueList(tracks, startIndex, false);
+        return;
+    }
     startContext(std::move(tracks), startIndex, QString(), false);
 }
 
 void PlaylistController::playTitled(std::vector<::Track> tracks, int startIndex, const QString &title, bool endless)
 {
+    if (m_settings->listsToQueue()) {
+        enqueueList(tracks, startIndex, endless);
+        return;
+    }
     startContext(std::move(tracks), startIndex, title, endless);
     saveTitledContext();
+}
+
+int PlaylistController::appendInOrder(const std::vector<::Track> &tracks)
+{
+    int added = 0;
+    for (const ::Track &track : tracks)
+        if (m_model->appendTrack(track))
+            ++added;
+    if (added > 0) {
+        setQueueCustomOrder(); // the list's own order, not sorted by album
+        emit countChanged();
+        save();
+    }
+    return added;
+}
+
+void PlaylistController::enqueueList(const std::vector<::Track> &tracks, int startIndex, bool endless)
+{
+    if (startIndex < 0 || size_t(startIndex) >= tracks.size())
+        return;
+    const std::string start = tracks[size_t(startIndex)].path;
+    appendInOrder(tracks);
+    m_queueMix = endless;
+    m_followUp.clear();
+    m_moreRequested = false;
+    playIndex(m_playlist.indexOf(start));
 }
 
 void PlaylistController::startContext(std::vector<::Track> tracks, int startIndex, const QString &title, bool endless,
@@ -273,6 +307,20 @@ void PlaylistController::setFollowUp(std::vector<::Track> tracks, const QString 
     m_moreFailures = 0;
     if (m_active != &m_playlist || tracks.empty())
         return;
+    if (m_settings->listsToQueue()) {
+        // The Mix grows the Queue itself: every song to come stays in sight.
+        m_moreRequested = false;
+        if (appendInOrder(tracks) == 0)
+            return;
+        emit currentChanged(); // hasNext
+        if (m_waitingForMore) {
+            m_waitingForMore = false;
+            next();
+        } else {
+            queueNext();
+        }
+        return;
+    }
     m_followUp = std::move(tracks);
     m_followUpTitle = title;
     if (m_waitingForMore) {
@@ -697,7 +745,7 @@ void PlaylistController::checkRunningOut()
             return;
         }
         const ::Track &track = m_playlist.at(size_t(current));
-        if (!m_settings->ytQueueMix() || m_moreRequested || !m_followUp.empty()
+        if (!(m_settings->ytQueueMix() || m_queueMix) || m_moreRequested || !m_followUp.empty()
             || !StreamResolver::isYouTube(track.path))
             return;
         seed = QString::fromStdString(track.path);
