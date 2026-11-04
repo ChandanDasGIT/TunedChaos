@@ -39,6 +39,15 @@ PlaylistsController::PlaylistsController(PlaylistController *queue, PlayerContro
         if (!m_queue->playingFromList() || !m_queue->contextTitle().isEmpty())
             setPlayingFrom({}); // a Queue song, or YouTube songs, were played
     });
+    // The list being played from is shown: it follows (more Mix songs; it ended: back to the Queue).
+    connect(m_queue, &PlaylistController::contextTracksChanged, this, [this] {
+        if (viewingPlayingList())
+            refreshView();
+    });
+    connect(m_queue, &PlaylistController::playingFromListChanged, this, [this] {
+        if (viewingPlayingList())
+            view(playingListId()); // (back to the Queue when none plays any more)
+    });
 }
 
 PlaylistsController::~PlaylistsController()
@@ -75,7 +84,7 @@ QString PlaylistsController::nameOf(const QString &id) const
 
 QString PlaylistsController::viewedName() const
 {
-    return nameOf(m_viewedId);
+    return viewingPlayingList() ? m_queue->contextTitle() : nameOf(m_viewedId);
 }
 
 QString PlaylistsController::playingFromName() const
@@ -93,7 +102,10 @@ qint64 PlaylistsController::viewedDurationMs() const
 
 void PlaylistsController::view(const QString &id)
 {
-    m_viewedId = m_library->find(id.toStdString()) ? id : QString();
+    if (id == playingListId())
+        m_viewedId = m_queue->contextTitle().isEmpty() ? QString() : id; // only while one plays
+    else
+        m_viewedId = m_library->find(id.toStdString()) ? id : QString();
     refreshView();
 }
 
@@ -112,8 +124,12 @@ void PlaylistsController::refreshView()
         if (const PlaylistLibrary::Entry *playing = m_library->find(m_playingFromId.toStdString()))
             m_queue->updateListTracks(playing->tracks);
 
-    const PlaylistLibrary::Entry *entry = m_library->find(m_viewedId.toStdString());
-    m_viewModel->setTracks(entry ? entry->tracks : std::vector<::Track>{});
+    if (viewingPlayingList()) {
+        m_viewModel->setTracks(m_queue->contextTracks());
+    } else {
+        const PlaylistLibrary::Entry *entry = m_library->find(m_viewedId.toStdString());
+        m_viewModel->setTracks(entry ? entry->tracks : std::vector<::Track>{});
+    }
     updateViewCurrent();
     emit viewChanged();
 }
@@ -132,6 +148,10 @@ void PlaylistsController::updateViewCurrent()
 
 void PlaylistsController::playViewed(int index)
 {
+    if (viewingPlayingList()) {
+        m_queue->playContextIndex(index);
+        return;
+    }
     const PlaylistLibrary::Entry *entry = m_library->find(m_viewedId.toStdString());
     if (!entry || index < 0 || size_t(index) >= entry->tracks.size())
         return;
@@ -150,7 +170,7 @@ bool PlaylistsController::resumePlaylist(const QString &id, const QString &path,
 
 void PlaylistsController::removeFromViewed(int index)
 {
-    if (m_viewedId.isEmpty())
+    if (m_viewedId.isEmpty() || viewingPlayingList())
         return;
     m_library->removeTrack(m_viewedId.toStdString(), size_t(index));
     refreshView();
@@ -159,7 +179,7 @@ void PlaylistsController::removeFromViewed(int index)
 
 void PlaylistsController::moveInViewed(int from, int to)
 {
-    if (m_viewedId.isEmpty() || from == to)
+    if (m_viewedId.isEmpty() || viewingPlayingList() || from == to)
         return;
     m_library->moveTrack(m_viewedId.toStdString(), size_t(from), size_t(to));
     m_viewModel->moveTrack(from, to); // animated, unlike a full refresh

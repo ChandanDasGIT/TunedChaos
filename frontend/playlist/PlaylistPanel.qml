@@ -302,6 +302,21 @@ Rectangle {
                 onObjectRemoved: (index, object) => playlistsMenu.removeAction(object)
             }
 
+            // The list being played from (an album, a Mix...), first: present only while one plays
+            Instantiator {
+                id: playingEntry
+                model: PlaylistController.contextTitle !== "" ? 1 : 0
+
+                delegate: Action {
+                    text: qsTr("Playing: %1").arg(PlaylistController.contextTitle)
+                    icon.name: "play"
+                    onTriggered: PlaylistsController.view(PlaylistsController.playingListId)
+                }
+
+                onObjectAdded: (index, object) => playlistsMenu.insertAction(0, object)
+                onObjectRemoved: (index, object) => playlistsMenu.removeAction(object)
+            }
+
             // "No playlists yet": present only while there are none
             Instantiator {
                 model: PlaylistsController.playlists.length === 0 ? 1 : 0
@@ -312,7 +327,7 @@ Rectangle {
                     icon.name: "info"
                 }
 
-                onObjectAdded: (index, object) => playlistsMenu.insertAction(0, object)
+                onObjectAdded: (index, object) => playlistsMenu.insertAction(playingEntry.count, object)
                 onObjectRemoved: (index, object) => playlistsMenu.removeAction(object)
             }
 
@@ -336,6 +351,7 @@ Rectangle {
             }
 
             Action {
+                enabled: PlaylistsController.viewedEditable
                 text: root.viewingQueue ? qsTr("Export the Queue as M3U…")
                                         : qsTr("Export “%1” as M3U…").arg(PlaylistsController.viewedName)
                 icon.name: "link"
@@ -344,14 +360,14 @@ Rectangle {
             }
 
             Action {
-                enabled: !root.viewingQueue
+                enabled: !root.viewingQueue && PlaylistsController.viewedEditable
                 text: root.viewingQueue ? qsTr("Rename…") : qsTr("Rename “%1”…").arg(PlaylistsController.viewedName)
                 icon.name: "settings"
                 onTriggered: PlaylistsController.requestRename(PlaylistsController.viewedId)
             }
 
             Action {
-                enabled: !root.viewingQueue
+                enabled: !root.viewingQueue && PlaylistsController.viewedEditable
                 text: root.viewingQueue ? qsTr("Delete…") : qsTr("Delete “%1”…").arg(PlaylistsController.viewedName)
                 icon.name: "trash"
                 onTriggered: PlaylistsController.requestDelete(PlaylistsController.viewedId)
@@ -459,6 +475,7 @@ Rectangle {
                 openRowIndex: list.openSwipeRow
                 list: list
                 rowCount: list.count
+                editable: root.viewingQueue || PlaylistsController.viewedEditable
                 onMoveRequested: (from, to) => root.viewingQueue ? PlaylistController.moveIndex(from, to)
                                                                  : PlaylistsController.moveInViewed(from, to)
                 onSwipeOpened: list.openSwipeRow = row.index
@@ -507,6 +524,7 @@ Rectangle {
             PlaylistContextMenu {
                 id: contextMenu
                 inQueue: root.viewingQueue
+                canRemove: root.viewingQueue || PlaylistsController.viewedEditable
                 onDetailsRequested: (path) => root.detailsRequested(path)
             }
         }

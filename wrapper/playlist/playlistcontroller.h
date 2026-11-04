@@ -81,6 +81,10 @@ public:
     const ::Track *trackForPath(const QString &path) const;
     // The song that plays after this one ("" = none / not known yet)
     QString nextPath() const;
+    // The titled list being played from (album, Mix...: contextTitle() not empty)
+    const std::vector<::Track> &contextTracks() const { return m_context.tracks(); }
+    // Plays that song of the list being played from (it stays the list played from).
+    void playContextIndex(int index);
     QString currentThumbnail() const;
     const std::vector<::Track> &tracks() const { return m_playlist.tracks(); }
     bool hasNext() const;
@@ -163,6 +167,7 @@ signals:
     // Running out: what YouTube plays after `seedPath`, please. forQueue: for
     // after the Queue's last song (setFollowUp), else for the list (extendList).
     void moreWanted(const QString &seedPath, bool forQueue);
+    void contextTracksChanged(); // the list being played from got other / more songs
 
 private:
     // Runs `change` on the playlist and notifies the model / QML about the new current track.

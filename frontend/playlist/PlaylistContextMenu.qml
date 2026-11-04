@@ -10,6 +10,7 @@ ThemedMenu {
     property int row: -1
     property string path
     property bool inQueue: true // false: the row belongs to the viewed playlist
+    property bool canRemove: true // false: the list being played from (it can't be changed)
 
     signal detailsRequested(string path)
 
@@ -69,6 +70,7 @@ ThemedMenu {
     }
 
     Action {
+        enabled: root.canRemove // (not from the list being played from: it's only for now)
         text: root.inQueue ? qsTr("Remove from queue") : qsTr("Remove from playlist")
         icon.name: "trash"
         onTriggered: root.inQueue ? PlaylistController.removeIndex(root.row)

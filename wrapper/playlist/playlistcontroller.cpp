@@ -251,6 +251,7 @@ void PlaylistController::startContext(std::vector<::Track> tracks, int startInde
     m_followUp.clear();
     m_active = &m_context;
     emit playingFromListChanged(); // also when only the title changed
+    emit contextTracksChanged();
     emit currentChanged();
     if (load)
         loadCurrent();
@@ -274,6 +275,7 @@ void PlaylistController::extendList(const std::vector<::Track> &tracks)
         return; // nothing new: don't keep asking
     m_moreRequested = false;
     saveTitledContext();
+    emit contextTracksChanged();
     emit currentChanged(); // hasNext / upcoming changed
     if (m_waitingForMore) {
         m_waitingForMore = false;
@@ -690,6 +692,14 @@ bool PlaylistController::resumeAlone(const ::Track &track, qint64 positionMs)
     m_player->loadPaused(QString::fromStdString(track.path), positionMs);
     emit currentChanged();
     return true;
+}
+
+void PlaylistController::playContextIndex(int index)
+{
+    if (m_active != &m_context || index < 0 || size_t(index) >= m_context.size())
+        return;
+    changeCurrent([&] { m_context.select(index); });
+    loadCurrent();
 }
 
 QString PlaylistController::nextPath() const

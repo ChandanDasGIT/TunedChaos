@@ -22,6 +22,7 @@ Item {
 
     property bool selected: false
     property bool menuOpen: false // this row's menu is open: keep "⋮" shown
+    property bool editable: true  // false: no swipe to delete, no hold to reorder
     property real indicatorWidth: 70
     property real titleWidth: 200
     property real artistAlbumWidth: 200
@@ -62,7 +63,7 @@ Item {
     // Held long enough: the row lifts and follows the pointer. The list stops
     // scrolling meanwhile, so the drag moves the row instead.
     function startReorder(scenePos) {
-        if (!list)
+        if (!list || !editable)
             return
         closeSwipe()
         const pointer = list.contentItem.mapFromItem(null, scenePos.x, scenePos.y).y
@@ -105,6 +106,8 @@ Item {
             swipeOpened()
     }
     function swipeBy(dx) {
+        if (!editable)
+            return
         swipeX = Math.max(-revealWidth * 1.3, Math.min(0, swipeX + dx))
     }
 
@@ -163,7 +166,7 @@ Item {
 
         property real startX: 0
 
-        enabled: !root.reordering
+        enabled: !root.reordering && root.editable
         target: null
         xAxis.enabled: true
         yAxis.enabled: false // vertical drags still scroll the list
@@ -280,6 +283,7 @@ Item {
                 id: grip
                 width: 26
                 height: parent.height
+                visible: root.editable
 
                 Icon {
                     anchors.centerIn: parent

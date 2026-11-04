@@ -41,6 +41,10 @@ class PlaylistsController : public QObject
     Q_PROPERTY(PlaylistModel *viewModel READ viewModel CONSTANT)
     Q_PROPERTY(int viewedCount READ viewedCount NOTIFY viewChanged)
     Q_PROPERTY(qint64 viewedDurationMs READ viewedDurationMs NOTIFY viewChanged)
+    // view(playingListId) shows the list being played from (an album, a Mix...),
+    // which plays on its own outside the Queue. It can't be edited.
+    Q_PROPERTY(QString playingListId READ playingListId CONSTANT)
+    Q_PROPERTY(bool viewedEditable READ viewedEditable NOTIFY viewChanged)
     Q_PROPERTY(QString playingFromId READ playingFromId NOTIFY playingFromChanged)
     Q_PROPERTY(QString playingFromName READ playingFromName NOTIFY playingFromChanged)
 
@@ -56,6 +60,9 @@ public:
 
     QVariantList playlists() const;
     QString viewedId() const { return m_viewedId; }
+    static QString playingListId() { return QStringLiteral("@playing"); }
+    bool viewingPlayingList() const { return m_viewedId == playingListId(); }
+    bool viewedEditable() const { return !viewingPlayingList(); }
     QString viewedName() const;
     PlaylistModel *viewModel() const { return m_viewModel.get(); }
     int viewedCount() const { return int(m_view.size()); }
