@@ -61,6 +61,7 @@ void AppUpdater::check()
                 return; // a release without our kind of file has nothing to offer here
             self->m_version = QString::fromStdString(release->version);
             self->m_pageUrl = QString::fromStdString(release->pageUrl);
+            self->m_notes = QString::fromStdString(release->notes).trimmed();
             if (asset) {
                 self->m_assetName = QString::fromStdString(asset->name);
                 self->m_assetUrl = QString::fromStdString(asset->url);

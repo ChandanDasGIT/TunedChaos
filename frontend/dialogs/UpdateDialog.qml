@@ -88,6 +88,26 @@ Popup {
             wrapMode: Text.WordWrap
         }
 
+        // What's new (the release's notes), before updating
+        ScrollView {
+            Layout.fillWidth: true
+            Layout.preferredHeight: Math.min(notesLabel.implicitHeight, 220)
+            visible: notesLabel.text !== "" && !root.downloading && !root.installed && !root.needsPermission
+            clip: true
+            contentWidth: availableWidth
+
+            Label {
+                id: notesLabel
+                width: parent.width
+                text: root.updater !== null ? root.updater.notes : ""
+                textFormat: Text.MarkdownText
+                color: Theme.text
+                font.pixelSize: Theme.fontSizeSmall
+                wrapMode: Text.WordWrap
+                onLinkActivated: (link) => Qt.openUrlExternally(link)
+            }
+        }
+
         // The download
         Rectangle {
             Layout.fillWidth: true

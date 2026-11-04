@@ -25,6 +25,7 @@ class AppUpdater : public QObject
     Q_PROPERTY(bool installed READ installed NOTIFY stateChanged) // desktop: restart to use it
     Q_PROPERTY(QString error READ error NOTIFY stateChanged) // why the download failed
     Q_PROPERTY(int progress READ progress NOTIFY progressChanged) // percent
+    Q_PROPERTY(QString notes READ notes NOTIFY updateAvailable) // what's new (Markdown)
 
 public:
     AppUpdater(SettingsController *settings, QObject *parent);
@@ -38,6 +39,7 @@ public:
     bool installed() const { return m_installed; }
     QString error() const { return m_error; }
     int progress() const { return m_progress; }
+    QString notes() const { return m_notes; }
 
     Q_INVOKABLE void startUpdate();
     Q_INVOKABLE void openInstallSettings();
@@ -57,7 +59,7 @@ private:
     void continueInstall();
 
     SettingsController *m_settings;
-    QString m_version, m_pageUrl;
+    QString m_version, m_pageUrl, m_notes;
     QString m_assetName, m_assetUrl, m_assetSha256;
     qint64 m_assetSize = 0;
     QString m_downloaded; // waiting to be installed

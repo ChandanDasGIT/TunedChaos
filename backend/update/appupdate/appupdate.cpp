@@ -85,6 +85,7 @@ std::optional<UpdateRelease> AppUpdate::latest()
     UpdateRelease out;
     out.version = versionOfTag(release.value("tag_name", std::string()));
     out.pageUrl = release.value("html_url", std::string());
+    out.notes = release.value("body", std::string());
     if (out.version.empty())
         return std::nullopt;
     if (const auto assets = release.find("assets"); assets != release.end() && assets->is_array())

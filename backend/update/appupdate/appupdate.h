@@ -21,6 +21,7 @@ struct UpdateRelease
 {
     std::string version; // "1.2" (from the tag "v1.2")
     std::string pageUrl;  // the release's page, for reading or downloading by hand
+    std::string notes;    // what's new (Markdown, as written on the release)
     std::vector<UpdateAsset> assets;
 
     // The file whose name ends with `suffix` (".apk", ".AppImage"...), if there is one.
