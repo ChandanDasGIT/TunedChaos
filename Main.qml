@@ -1335,7 +1335,7 @@ ApplicationWindow {
         onConfirmed: HistoryController.clear()
     }
 
-    // A new version of the app (AppUpdater only exists on Android)
+    // A new version of the app
     UpdateDialog {
         id: updateDialog
         objectName: "updateDialog"

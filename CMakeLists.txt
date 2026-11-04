@@ -116,6 +116,10 @@ add_library(backend STATIC
     backend/network/httpclient/httpclient.h
     backend/storage/tsv/tsv.h
     backend/system/process/process.h
+    backend/update/appupdate/appupdate.cpp
+    backend/update/appupdate/appupdate.h
+    backend/update/sha256/sha256.cpp
+    backend/update/sha256/sha256.h
     backend/youtube/linklibrary/linklibrary.cpp
     backend/youtube/linklibrary/linklibrary.h
     backend/youtube/streamresolver/streamresolver.cpp
@@ -194,6 +198,8 @@ qt_add_executable(TunedChaos
     wrapper/singleinstance/singleinstance.cpp
     wrapper/singleinstance/singleinstance.h
     wrapper/systemmedia/systemmedia.h
+    wrapper/update/appupdater.cpp
+    wrapper/update/appupdater.h
 )
 
 # The platform's parts (see CMP_PLATFORM above)
@@ -203,11 +209,13 @@ if(CMP_PLATFORM STREQUAL "linux")
         wrapper/mpris/mprisadaptor.h
         wrapper/notifications/notificationcontroller_linux.cpp
         wrapper/systemmedia/systemmedia_linux.cpp
+        wrapper/update/appupdater_linux.cpp
     )
 elseif(CMP_PLATFORM STREQUAL "windows")
     target_sources(TunedChaos PRIVATE
         wrapper/notifications/notificationcontroller_windows.cpp
         wrapper/systemmedia/systemmedia_windows.cpp
+        wrapper/update/appupdater_other.cpp
         # Icon, and the manifest: UTF-8 as the text encoding (see release/README.md)
         release/windows/TunedChaos.rc
         release/windows/TunedChaos.manifest
@@ -218,8 +226,7 @@ elseif(CMP_PLATFORM STREQUAL "android")
     target_sources(TunedChaos PRIVATE
         wrapper/notifications/notificationcontroller_android.cpp
         wrapper/systemmedia/systemmedia_android.cpp
-        wrapper/update/appupdater.cpp
-        wrapper/update/appupdater.h
+        wrapper/update/appupdater_android.cpp
     )
     # The APK: android/ holds its manifest, Gradle build (with Python and
     # yt-dlp: Chaquopy), Java parts and icon

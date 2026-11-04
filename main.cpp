@@ -35,16 +35,18 @@
 #include <QWindow>
 #include <QtQml/qqmlextensionplugin.h>
 
+#include "wrapper/update/appupdater.h"
+
+#include <QQmlContext>
+
 #ifdef Q_OS_ANDROID
 #include "backend/network/httpclient/httpclient.h"
-#include "wrapper/update/appupdater.h"
 
 #include <QDir>
 #include <QEventLoop>
 #include <QJniObject>
 #include <QFile>
 #include <QTimer>
-#include <QQmlContext>
 #endif
 
 #ifdef Q_OS_WIN
@@ -218,22 +220,19 @@ int main(int argc, char *argv[])
     QObject::connect(&player, &PlayerController::volumeChanged,
                      &settings, [&] { settings.setVolume(player.volume()); });
 
-#ifdef Q_OS_ANDROID
+    // New versions of the app (Settings > About > Check for updates)
     AppUpdater appUpdater(&settings, nullptr); // (before the engine, which must go first)
-#endif
 
     QQmlApplicationEngine engine;
     engine.addImageProvider(QStringLiteral("albumart"), new AlbumArtProvider); // engine takes ownership
-#ifdef Q_OS_ANDROID
     engine.rootContext()->setContextProperty(QStringLiteral("AppUpdater"), &appUpdater);
-#endif
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed,
         &app, [] { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
     engine.loadFromModule("TunedChaos", "Main");
-#ifdef Q_OS_ANDROID
     appUpdater.check(); // (after the load: the dialog listens from Main.qml)
+#ifdef Q_OS_ANDROID
     // The app has drawn itself: the loading screen goes.
     if (auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().value(0)))
         QObject::connect(window, &QQuickWindow::frameSwapped, &app, [splash] { splash->deleteLater(); },
@@ -285,7 +284,9 @@ int main(int argc, char *argv[])
 #else
         instance.stop(); // the new copy must not hand over to this one
         QProcess process;
-        process.setProgram(QCoreApplication::applicationFilePath());
+        // An AppImage starts again from its file (the program runs from inside it)
+        const QString appImage = qEnvironmentVariable("APPIMAGE");
+        process.setProgram(appImage.isEmpty() ? QCoreApplication::applicationFilePath() : appImage);
         process.setArguments(QCoreApplication::arguments().mid(1));
         if (scaleFromSettings) { // the new copy reads the new size itself
             QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();

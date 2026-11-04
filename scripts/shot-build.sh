@@ -17,6 +17,20 @@ hook = '''    // ---- screenshot harness
     }
     if (qEnvironmentVariableIsSet("SHOT_MUTE"))
         player.setVolume(0);
+    if (qEnvironmentVariableIsSet("SHOT_UPDATE")) { // an offered update: install it, print each step
+        QObject::connect(&appUpdater, &AppUpdater::updateAvailable, [&](const QString &v) {
+            std::printf("update: %s offered, canInstall=%d\\n", qPrintable(v), int(appUpdater.canInstall()));
+            std::fflush(stdout);
+            appUpdater.startUpdate();
+        });
+        QObject::connect(&appUpdater, &AppUpdater::stateChanged, [&] {
+            std::printf("update: downloading=%d progress=%d installed=%d error=%s\\n", int(appUpdater.downloading()),
+                        appUpdater.progress(), int(appUpdater.installed()), qPrintable(appUpdater.error()));
+            std::fflush(stdout);
+            if (appUpdater.installed() || !appUpdater.error().isEmpty())
+                QCoreApplication::quit();
+        });
+    }
     QTimer::singleShot(800, [&] {
         if (qEnvironmentVariableIsSet("SHOT_PLAY_YT")) // play a YouTube song by id
         {

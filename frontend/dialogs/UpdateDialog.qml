@@ -2,8 +2,9 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// A new version of the app: offers it, then shows its download (Android only:
-// updater is AppUpdater, null elsewhere).
+// A new version of the app: offers it, then shows its download and, on the
+// desktop, a restart once it's installed. Where the app can't install it
+// itself, it points to the release's page (updater is AppUpdater).
 Popup {
     id: root
 
@@ -13,6 +14,8 @@ Popup {
     readonly property bool needsPermission: updater !== null && updater.needsPermission
     readonly property string error: updater !== null ? updater.error : ""
     readonly property int progress: updater !== null ? updater.progress : 0
+    readonly property bool canInstall: updater !== null && updater.canInstall
+    readonly property bool installed: updater !== null && updater.installed
 
     anchors.centerIn: Overlay.overlay
     width: Math.min(Overlay.overlay ? Overlay.overlay.width - 2 * Theme.padding : 380, 380)
@@ -59,6 +62,7 @@ Popup {
         Label {
             Layout.fillWidth: true
             text: root.needsPermission ? qsTr("Allow installing")
+                : root.installed ? qsTr("Version %1 is installed").arg(root.version)
                 : root.downloading ? qsTr("Downloading version %1").arg(root.version)
                 : qsTr("Update available")
             color: Theme.text
@@ -72,7 +76,10 @@ Popup {
             visible: !root.downloading
             text: root.needsPermission
                   ? qsTr("Android asks you to allow Tuned Chaos under “Install unknown apps”. Turn it on and come back: the update then installs.")
-                  : qsTr("Version %1 is available. You have version %2.").arg(root.version).arg(Qt.application.version)
+                  : root.installed ? qsTr("Restart the app to use it. The song you're playing picks up where it was.")
+                  : root.canInstall ? qsTr("Version %1 is available. You have version %2.").arg(root.version).arg(Qt.application.version)
+                  : qsTr("Version %1 is available. You have version %2. Get it from its download page.")
+                    .arg(root.version).arg(Qt.application.version)
             color: Theme.textMuted
             font.pixelSize: Theme.fontSize
             wrapMode: Text.WordWrap
@@ -124,18 +131,30 @@ Popup {
             PillButton {
                 visible: !root.downloading
                 text: root.needsPermission ? qsTr("Open settings")
+                    : root.installed ? qsTr("Restart now")
+                    : !root.canInstall ? qsTr("Download page")
                     : root.error !== "" ? qsTr("Try again")
                     : qsTr("Update")
                 filled: true
                 implicitHeight: 36
-                onClicked: root.needsPermission ? root.updater.openInstallSettings() : root.updater.startUpdate()
+                onClicked: {
+                    if (root.needsPermission)
+                        root.updater.openInstallSettings()
+                    else if (root.installed)
+                        root.updater.restartNow()
+                    else if (!root.canInstall) {
+                        root.updater.openDownloadPage()
+                        root.close()
+                    } else
+                        root.updater.startUpdate()
+                }
             }
         }
 
         // (Its own line: three buttons don't fit next to each other on a phone)
         PillButton {
             Layout.alignment: Qt.AlignRight
-            visible: !root.downloading && !root.needsPermission
+            visible: !root.downloading && !root.needsPermission && !root.installed
             text: qsTr("Skip this version")
             transparentIdle: true
             iconColor: Theme.textMuted

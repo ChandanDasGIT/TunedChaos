@@ -3,12 +3,12 @@
 #include <curl/curl.h>
 
 #include <algorithm>
+#include <cstdio>
+#include <filesystem>
 #include <memory>
 #include <mutex>
 
 #ifdef __ANDROID__
-#include <cstdio>
-#include <filesystem>
 #include <fstream>
 #include <iterator>
 #endif
@@ -143,6 +143,7 @@ const std::string &HttpClient::androidCertificates()
 {
     return readAndroidCertificates();
 }
+#endif
 
 namespace {
 
@@ -172,7 +173,8 @@ HttpResponse HttpClient::download(const std::string &url, const std::string &pat
     HttpResponse response;
 
     std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(), &curl_easy_cleanup);
-    std::unique_ptr<std::FILE, decltype(&std::fclose)> file(std::fopen(path.c_str(), "ab"), &std::fclose);
+    const auto close = [](std::FILE *f) { std::fclose(f); };
+    std::unique_ptr<std::FILE, decltype(close)> file(std::fopen(path.c_str(), "ab"), close);
     if (!curl || !file) {
         response.error = "Cannot start the download";
         return response;
@@ -192,9 +194,11 @@ HttpResponse HttpClient::download(const std::string &url, const std::string &pat
     curl_easy_setopt(handle, CURLOPT_LOW_SPEED_LIMIT, 1L);
     curl_easy_setopt(handle, CURLOPT_LOW_SPEED_TIME, 30L);
     curl_easy_setopt(handle, CURLOPT_NOSIGNAL, 1L);
+#ifdef __ANDROID__
     const std::string &certificates = readAndroidCertificates();
     curl_blob blob{const_cast<char *>(certificates.data()), certificates.size(), CURL_BLOB_NOCOPY};
     curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &blob);
+#endif
     curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, &saveBody);
     curl_easy_setopt(handle, CURLOPT_WRITEDATA, &download);
 
@@ -210,4 +214,4 @@ HttpResponse HttpClient::download(const std::string &url, const std::string &pat
     }
     return response;
 }
-#endif
+

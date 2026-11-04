@@ -1492,11 +1492,8 @@ Rectangle {
                                 onClicked: Qt.openUrlExternally("https://github.com/ChandanDasGIT/TunedChaos")
                             }
 
-                            // (Android only: the other systems update through their own packages)
                             SettingsRow {
                                 Layout.fillWidth: true
-                                readonly property bool hiddenHere: !root.android
-                                visible: !hiddenHere
                                 title: qsTr("Check for updates")
                                 description: qsTr("Look for a new version of the app at startup.")
 
