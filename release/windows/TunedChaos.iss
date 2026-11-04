@@ -18,6 +18,8 @@
 #endif
 
 [Setup]
+; File types change: Explorer is told to look again
+ChangesAssociations=yes
 ; (The id Windows knows the installed app by: never change it)
 AppId={{5DCAD0ED-7FCC-42EE-95A0-8C212AF127B2}
 AppName=Tuned Chaos
@@ -56,6 +58,46 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 [Icons]
 Name: "{autoprograms}\Tuned Chaos"; Filename: "{app}\TunedChaos.exe"; AppUserModelID: "ChandanDas.TunedChaos"
 Name: "{autodesktop}\Tuned Chaos"; Filename: "{app}\TunedChaos.exe"; AppUserModelID: "ChandanDas.TunedChaos"; Tasks: desktopicon
+
+[Registry]
+; "Open with" for music files (not the default player: Windows asks the user)
+Root: HKA; Subkey: "Software\Classes\TunedChaos.AudioFile"; ValueType: string; ValueData: "Music file (Tuned Chaos)"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\TunedChaos.AudioFile\DefaultIcon"; ValueType: string; ValueData: """{app}\TunedChaos.exe"",0"
+Root: HKA; Subkey: "Software\Classes\TunedChaos.AudioFile\shell\open\command"; ValueType: string; ValueData: """{app}\TunedChaos.exe"" ""%1"""
+Root: HKA; Subkey: "Software\Classes\Applications\TunedChaos.exe"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "Tuned Chaos"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\Applications\TunedChaos.exe\shell\open\command"; ValueType: string; ValueData: """{app}\TunedChaos.exe"" ""%1"""
+Root: HKA; Subkey: "Software\Classes\.mp3\OpenWithProgids"; ValueType: string; ValueName: "TunedChaos.AudioFile"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\Applications\TunedChaos.exe\SupportedTypes"; ValueType: string; ValueName: ".mp3"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\.flac\OpenWithProgids"; ValueType: string; ValueName: "TunedChaos.AudioFile"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\Applications\TunedChaos.exe\SupportedTypes"; ValueType: string; ValueName: ".flac"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\.ogg\OpenWithProgids"; ValueType: string; ValueName: "TunedChaos.AudioFile"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\Applications\TunedChaos.exe\SupportedTypes"; ValueType: string; ValueName: ".ogg"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\.oga\OpenWithProgids"; ValueType: string; ValueName: "TunedChaos.AudioFile"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\Applications\TunedChaos.exe\SupportedTypes"; ValueType: string; ValueName: ".oga"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\.opus\OpenWithProgids"; ValueType: string; ValueName: "TunedChaos.AudioFile"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\Applications\TunedChaos.exe\SupportedTypes"; ValueType: string; ValueName: ".opus"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\.m4a\OpenWithProgids"; ValueType: string; ValueName: "TunedChaos.AudioFile"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\Applications\TunedChaos.exe\SupportedTypes"; ValueType: string; ValueName: ".m4a"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\.aac\OpenWithProgids"; ValueType: string; ValueName: "TunedChaos.AudioFile"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\Applications\TunedChaos.exe\SupportedTypes"; ValueType: string; ValueName: ".aac"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\.wav\OpenWithProgids"; ValueType: string; ValueName: "TunedChaos.AudioFile"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\Applications\TunedChaos.exe\SupportedTypes"; ValueType: string; ValueName: ".wav"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\.wma\OpenWithProgids"; ValueType: string; ValueName: "TunedChaos.AudioFile"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\Applications\TunedChaos.exe\SupportedTypes"; ValueType: string; ValueName: ".wma"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\.webm\OpenWithProgids"; ValueType: string; ValueName: "TunedChaos.AudioFile"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\Applications\TunedChaos.exe\SupportedTypes"; ValueType: string; ValueName: ".webm"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\.ape\OpenWithProgids"; ValueType: string; ValueName: "TunedChaos.AudioFile"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\Applications\TunedChaos.exe\SupportedTypes"; ValueType: string; ValueName: ".ape"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\.wv\OpenWithProgids"; ValueType: string; ValueName: "TunedChaos.AudioFile"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\Applications\TunedChaos.exe\SupportedTypes"; ValueType: string; ValueName: ".wv"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\.aiff\OpenWithProgids"; ValueType: string; ValueName: "TunedChaos.AudioFile"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\Applications\TunedChaos.exe\SupportedTypes"; ValueType: string; ValueName: ".aiff"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\.aif\OpenWithProgids"; ValueType: string; ValueName: "TunedChaos.AudioFile"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\Applications\TunedChaos.exe\SupportedTypes"; ValueType: string; ValueName: ".aif"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\.m3u\OpenWithProgids"; ValueType: string; ValueName: "TunedChaos.AudioFile"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\Applications\TunedChaos.exe\SupportedTypes"; ValueType: string; ValueName: ".m3u"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\.m3u8\OpenWithProgids"; ValueType: string; ValueName: "TunedChaos.AudioFile"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\Applications\TunedChaos.exe\SupportedTypes"; ValueType: string; ValueName: ".m3u8"; ValueData: ""
 
 [Run]
 Filename: "{app}\TunedChaos.exe"; Description: "{cm:LaunchProgram,Tuned Chaos}"; Flags: nowait postinstall skipifsilent

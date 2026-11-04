@@ -31,7 +31,8 @@ cp -a "$here/app/." "$target/"
 quoted="\"$(printf '%s' "$target/AppRun" | sed -e 's/[\\"`$]/\\&/g')\""
 sedEscape() { printf '%s' "$1" | sed -e 's/[\\&|]/\\&/g'; }
 mkdir -p "$apps" "$icons"
-sed -e "s|^Exec=.*|Exec=$(sedEscape "$quoted")|" "$target/usr/share/applications/$id.desktop" > "$apps/$id.desktop"
+# (keeps what follows the command: %U, the files to open)
+sed -e "s|^Exec=[^ ]*|Exec=$(sedEscape "$quoted")|" "$target/usr/share/applications/$id.desktop" > "$apps/$id.desktop"
 chmod 644 "$apps/$id.desktop"
 install -m644 "$target/usr/share/icons/hicolor/scalable/apps/$id.svg" "$icons/$id.svg"
 command -v update-desktop-database >/dev/null && update-desktop-database -q "$apps" || true

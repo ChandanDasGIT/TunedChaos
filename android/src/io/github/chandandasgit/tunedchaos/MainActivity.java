@@ -20,6 +20,15 @@ public class MainActivity extends QtActivity {
     public void onCreate(android.os.Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         instance = this;
+        OpenedFiles.handle(this, getIntent()); // opened to play a file
+    }
+
+    // A file opened while the app runs ("Open with" with the app already open)
+    @Override
+    protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        OpenedFiles.handle(this, intent);
     }
 
     // Back with nothing left to go back from: the app goes to the background

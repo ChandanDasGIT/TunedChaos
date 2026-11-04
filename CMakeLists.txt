@@ -198,6 +198,8 @@ qt_add_executable(TunedChaos
     wrapper/singleinstance/singleinstance.cpp
     wrapper/singleinstance/singleinstance.h
     wrapper/systemmedia/systemmedia.h
+    wrapper/opener/fileopener.cpp
+    wrapper/opener/fileopener.h
     wrapper/update/appupdater.cpp
     wrapper/update/appupdater.h
 )
@@ -227,6 +229,7 @@ elseif(CMP_PLATFORM STREQUAL "android")
         wrapper/notifications/notificationcontroller_android.cpp
         wrapper/systemmedia/systemmedia_android.cpp
         wrapper/update/appupdater_android.cpp
+        wrapper/opener/fileopener_android.cpp
     )
     # The APK: android/ holds its manifest, Gradle build (with Python and
     # yt-dlp: Chaquopy), Java parts and icon

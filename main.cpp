@@ -5,6 +5,7 @@
 #include "wrapper/history/historycontroller.h"
 #include "wrapper/library/librarycontroller.h"
 #include "wrapper/hosted/hostedcontroller.h"
+#include "wrapper/opener/fileopener.h"
 #include "wrapper/locallibrary/locallibrarycontroller.h"
 #include "wrapper/loudness/loudnesscontroller.h"
 #include "wrapper/lyrics/lyricscontroller.h"
@@ -110,9 +111,13 @@ int main(int argc, char *argv[])
     }
 #endif
 
-    // Only one copy per user: a second launch brings the first one forward.
+    // Files to open (double-click, "Open with"): what follows the program
+    const QStringList filesToOpen = FileOpener::filesIn(QCoreApplication::arguments().mid(1));
+
+    // Only one copy per user: a second launch brings the first one forward
+    // (and hands it the files it was asked to open).
     SingleInstance instance(nullptr);
-    if (!instance.start())
+    if (!instance.start(filesToOpen))
         return 0;
 
     // Our own style: Basic (fully customizable from QML) with a nicer ToolTip.
@@ -258,6 +263,13 @@ int main(int argc, char *argv[])
         }
     };
     QObject::connect(&instance, &SingleInstance::activationRequested, &app, raiseWindow);
+    // Music files opened from the system: to the Queue, the first plays
+    FileOpener opener(&playlist, &library, nullptr);
+    QObject::connect(&instance, &SingleInstance::openRequested, &opener, &FileOpener::open);
+    QObject::connect(&opener, &FileOpener::opened, &app, raiseWindow);
+    if (!filesToOpen.isEmpty())
+        opener.open(filesToOpen); // (after the last session was restored, so these win)
+    opener.listenToSystem();      // Android: what it asks to open
 
     // The system's media controls / media keys (Linux: also playerctl).
     SystemMedia systemMedia(&player, &playlist, nullptr);
@@ -294,7 +306,12 @@ int main(int argc, char *argv[])
         // An AppImage starts again from its file (the program runs from inside it)
         const QString appImage = qEnvironmentVariable("APPIMAGE");
         process.setProgram(appImage.isEmpty() ? QCoreApplication::applicationFilePath() : appImage);
-        process.setArguments(QCoreApplication::arguments().mid(1));
+        // (Options only: files opened at the start aren't opened again)
+        QStringList options;
+        for (const QString &argument : QCoreApplication::arguments().mid(1))
+            if (argument.startsWith(QLatin1Char('-')))
+                options << argument;
+        process.setArguments(options);
         if (scaleFromSettings) { // the new copy reads the new size itself
             QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
             environment.remove(QStringLiteral("QT_SCALE_FACTOR"));
