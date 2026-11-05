@@ -51,6 +51,8 @@ public:
     Q_INVOKABLE QVariantMap infoFor(const QString &path) const;
     // Look this one up next (e.g. its details window is open).
     Q_INVOKABLE void prioritize(const QString &path);
+    // The YouTube Music song already found for this local file ("": not looked up / no match).
+    QString cachedVideoId(const QString &path) const;
 
 signals:
     void enabledChanged();

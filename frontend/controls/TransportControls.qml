@@ -161,7 +161,7 @@ ColumnLayout {
             }
         }
 
-        // Autoplay: after a YouTube song, album or playlist, keep going with its Mix
+        // Autoplay (Settings > Autoplay): off, or back to the mode last chosen
         Rectangle {
             implicitWidth: autoplay.implicitWidth + 10
             implicitHeight: autoplay.implicitHeight + 10
@@ -176,10 +176,17 @@ ColumnLayout {
                 implicitWidth: 60
                 implicitHeight: 38
                 transparentIdle: true
-                active: SettingsController.ytAutoplay
-                onClicked: SettingsController.ytAutoplay = !SettingsController.ytAutoplay
+                active: SettingsController.autoplay !== "off"
+                onClicked: SettingsController.toggleAutoplay()
                 ToolTip.visible: hovered
-                ToolTip.text: SettingsController.ytAutoplay ? qsTr("Autoplay similar songs: on") : qsTr("Autoplay similar songs: off")
+                ToolTip.text: {
+                    switch (SettingsController.autoplay) {
+                    case "off": return qsTr("Autoplay: off")
+                    case "youtube": return qsTr("Autoplay: YouTube only")
+                    case "queue": return qsTr("Autoplay: Queue only")
+                    default: return qsTr("Autoplay: everywhere")
+                    }
+                }
             }
         }
     }

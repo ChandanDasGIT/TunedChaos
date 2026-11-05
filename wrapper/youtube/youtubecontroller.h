@@ -17,6 +17,7 @@ class QJSEngine;
 class QQmlEngine;
 class SettingsController;
 class YtDlpManager;
+class YtMetadataController;
 
 // Everything the YouTube Music panel shows and does (`YouTubeController`
 // singleton). Songs are passed to QML as maps:
@@ -75,6 +76,8 @@ class YouTubeController : public QObject
 
 public:
     YouTubeController(PlaylistController *playlist, SettingsController *settings, QObject *parent);
+    // For local songs' YouTube Music matches (autoplay after them)
+    void setMetadata(YtMetadataController *metadata) { m_metadata = metadata; }
     ~YouTubeController() override;
 
     static YouTubeController *create(QQmlEngine *qmlEngine, QJSEngine *jsEngine);
@@ -156,9 +159,10 @@ private:
 
     static inline YouTubeController *s_instance = nullptr;
 
-    void fetchMore(const QString &seedPath, bool forQueue);
+    void fetchMore(const QString &seedPath, bool followUp);
 
     PlaylistController *m_playlist;
+    YtMetadataController *m_metadata = nullptr;
     SettingsController *m_settings;
     std::unique_ptr<LinkLibrary> m_links;
 

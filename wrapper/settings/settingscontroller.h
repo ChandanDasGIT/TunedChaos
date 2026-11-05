@@ -69,10 +69,12 @@ class SettingsController : public QObject
     Q_PROPERTY(QString appUpdateSkipped READ appUpdateSkipped WRITE setAppUpdateSkipped NOTIFY appUpdateSkippedChanged)
     // YouTube
     Q_PROPERTY(bool ytBackgroundLookup READ ytBackgroundLookup WRITE setYtBackgroundLookup NOTIFY ytBackgroundLookupChanged)
-    // After a YouTube song / album / playlist: keep going with YouTube's "up next" (a Mix).
-    Q_PROPERTY(bool ytAutoplay READ ytAutoplay WRITE setYtAutoplay NOTIFY ytAutoplayChanged)
-    // When the Queue ends on a YouTube song: continue with its Mix.
-    Q_PROPERTY(bool ytQueueMix READ ytQueueMix WRITE setYtQueueMix NOTIFY ytQueueMixChanged)
+    // What keeps playing similar songs from YouTube Music (a Mix) once it ends:
+    //  "off"     nothing
+    //  "youtube" YouTube songs / albums / playlists, and the Queue when its last song is from YouTube
+    //  "queue"   the Queue, whatever its last song
+    //  "all"     every list (local, hosted, YouTube, playlists...) and the Queue
+    Q_PROPERTY(QString autoplay READ autoplay WRITE setAutoplay NOTIFY autoplayChanged)
     // Playing a list (album, artist, playlist, YouTube...) adds it to the end of the Queue
     // instead of playing it on its own, out of sight; a Mix after it grows the Queue too.
     Q_PROPERTY(bool listsToQueue READ listsToQueue WRITE setListsToQueue NOTIFY listsToQueueChanged)
@@ -218,14 +220,17 @@ public:
     QString ytCookiesBrowser() const;
     void setYtCookiesBrowser(const QString &browser);
     void setYtBackgroundLookup(bool enabled);
-    bool ytAutoplay() const;
-    void setYtAutoplay(bool enabled);
+    QString autoplay() const;
+    void setAutoplay(const QString &mode);
+    // The player's autoplay button: off, or back to the mode last chosen ("all" if none).
+    Q_INVOKABLE void toggleAutoplay();
+    bool autoplayYouTube() const; // YouTube songs / lists go on with a Mix
+    bool autoplayLists() const;   // any other list too
+    bool autoplayQueue(bool lastIsYouTube) const; // the Queue, ending on such a song
     bool appUpdateCheck() const;
     void setAppUpdateCheck(bool enabled);
     QString appUpdateSkipped() const;
     void setAppUpdateSkipped(const QString &version);
-    bool ytQueueMix() const;
-    void setYtQueueMix(bool enabled);
     bool listsToQueue() const;
     void setListsToQueue(bool enabled);
     bool eqEnabled() const;
@@ -337,10 +342,9 @@ signals:
     void lyricsSyncedByDefaultChanged();
     void lyricsLatinScriptChanged();
     void ytBackgroundLookupChanged();
-    void ytAutoplayChanged();
+    void autoplayChanged();
     void appUpdateCheckChanged();
     void appUpdateSkippedChanged();
-    void ytQueueMixChanged();
     void listsToQueueChanged();
     void ytSearchHistoryChanged();
     void ytQualityChanged();

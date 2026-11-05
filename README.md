@@ -117,8 +117,10 @@ chmod +x TunedChaos-*.AppImage
   any tab.
 - **Mix (autoplay)**: a song plays followed by what YouTube Music plays next,
   topped up as it goes; an album or playlist plays as it is, then its Mix.
-  When the Queue ends on a YouTube song, its Mix can follow. Both can be
-  turned off.
+  Settings › Autoplay picks when a Mix follows: Off, YouTube only (YouTube
+  songs and lists, and the Queue ending on a YouTube song), Queue only (the
+  Queue ending on any song) or Everywhere (any album, folder, playlist or
+  hosted list too: your own songs are first found on YouTube Music).
 - **Recent searches**: the searches you used, newest first; remove one or all.
 - **Audio quality**: Auto (best, but the smallest streams on a metered
   connection), Best or Lowest.

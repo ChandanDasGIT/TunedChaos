@@ -28,7 +28,8 @@ class SettingsController;
 // Library list (all songs, an album, an artist, a folder) or a YouTube album /
 // playlist as is, a single YouTube song as a Mix (YouTube's "up next", topped
 // up as it runs out).
-// When the Queue ends on a YouTube song, its Mix can follow (setFollowUp).
+// When the Queue or another list ends, a Mix of its last song can follow
+// (setFollowUp; Settings > Autoplay says when).
 // count / currentIndex / model / tracks describe the Queue; current* and
 // hasNext / upcomingMs describe whatever is playing.
 class PlaylistController : public QObject
@@ -127,8 +128,9 @@ public:
     // The moreWanted request failed (offline, YouTube trouble): asked again a few
     // times, a little later.
     void moreFailed();
-    // A Mix to go on with once the Queue ends (the answer to moreWanted(.., true)).
-    void setFollowUp(std::vector<::Track> tracks, const QString &title);
+    // A Mix to go on with once the Queue / the list playing ends (the answer to
+    // moreWanted(seedPath, true); none found: `tracks` empty, it just ends).
+    void setFollowUp(std::vector<::Track> tracks, const QString &title, const QString &seedPath);
     // Resuming the last session: the song is loaded paused at `positionMs`.
     // false if the song isn't there.
     bool resumeInQueue(const QString &path, qint64 positionMs);
@@ -164,9 +166,10 @@ signals:
     void shuffleChanged();
     void repeatModeChanged();
     void playingFromListChanged();
-    // Running out: what YouTube plays after `seedPath`, please. forQueue: for
-    // after the Queue's last song (setFollowUp), else for the list (extendList).
-    void moreWanted(const QString &seedPath, bool forQueue);
+    // Running out: what YouTube plays after `seedPath`, please. followUp: a Mix
+    // for after the Queue / the list playing (setFollowUp), else more for the
+    // Mix playing (extendList).
+    void moreWanted(const QString &seedPath, bool followUp);
     void contextTracksChanged(); // the list being played from got other / more songs
 
 private:
@@ -181,6 +184,8 @@ private:
     void startContext(std::vector<::Track> tracks, int startIndex, const QString &title, bool endless,
                       bool load = true);
     void startFollowUp(bool load);
+    bool takesFollowUp() const;
+    bool followUpReady() const;
     void saveTitledContext() const;
     static bool continuesAlbum(const ::Track &from, const ::Track &to);
     void onTrackChanged(const QString &path);
@@ -207,7 +212,8 @@ private:
     int m_moreFailures = 0;        // failed answers in a row
     bool m_queueMix = false;       // the Queue's YouTube Mix goes on after it (a Mix sent to the Queue)
     bool m_waitingForMore = false; // the music ran out before the answer came
-    std::vector<::Track> m_followUp; // the Mix after the Queue's last song
+    std::vector<::Track> m_followUp; // the Mix after the Queue's / the list's last song
+    QString m_moreSeed;              // what the last moreWanted asked about (later answers are for nothing)
     QString m_followUpTitle;
     QString m_titledStorePath;    // the titled list playing, for resuming it
     // The song that keeps playing after the Queue was cleared (until it ends or is stopped).

@@ -78,6 +78,12 @@ bool YtMetadataController::enabled() const
     return m_settings->ytBackgroundLookup();
 }
 
+QString YtMetadataController::cachedVideoId(const QString &path) const
+{
+    const YtMetadataEntry *entry = m_store->find(path.toStdString());
+    return entry && entry->matched ? QString::fromStdString(entry->song.videoId) : QString();
+}
+
 QVariantMap YtMetadataController::infoFor(const QString &path) const
 {
     if (path.isEmpty())

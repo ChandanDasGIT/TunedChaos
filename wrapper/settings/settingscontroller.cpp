@@ -66,6 +66,9 @@ constexpr const char *LyricsSourcesKey = "lyrics.sources";
 constexpr const char *LyricsSyncedKey = "lyrics.syncedByDefault";
 constexpr const char *LyricsLatinKey = "lyrics.latinScript";
 constexpr const char *YtLookupKey = "youtube.backgroundLookup";
+constexpr const char *AutoplayKey = "autoplay.mode";
+constexpr const char *AutoplayLastKey = "autoplay.lastMode"; // the last mode other than "off"
+// Before autoplay.mode: two switches (read once to pick the mode)
 constexpr const char *YtAutoplayKey = "youtube.autoplay";
 constexpr const char *AppUpdateCheckKey = "updates.check";
 constexpr const char *AppUpdateSkippedKey = "updates.skippedVersion";
@@ -898,18 +901,62 @@ void SettingsController::setYtBackgroundLookup(bool enabled)
     emit ytBackgroundLookupChanged();
 }
 
-bool SettingsController::ytAutoplay() const
+static bool isAutoplayMode(const QString &mode)
 {
-    return m_settings->boolValue(YtAutoplayKey, true);
+    return mode == QLatin1String("off") || mode == QLatin1String("youtube") || mode == QLatin1String("queue")
+           || mode == QLatin1String("all");
 }
 
-void SettingsController::setYtAutoplay(bool enabled)
+QString SettingsController::autoplay() const
 {
-    if (enabled == ytAutoplay())
+    const QString mode = QString::fromStdString(m_settings->value(AutoplayKey));
+    if (isAutoplayMode(mode))
+        return mode;
+    // Not chosen yet: as the old switches had it (both on by default)
+    if (m_settings->boolValue(YtAutoplayKey, true))
+        return QStringLiteral("youtube");
+    return m_settings->boolValue(YtQueueMixKey, true) ? QStringLiteral("queue") : QStringLiteral("off");
+}
+
+void SettingsController::setAutoplay(const QString &mode)
+{
+    if (!isAutoplayMode(mode) || mode == autoplay())
         return;
-    m_settings->setBool(YtAutoplayKey, enabled);
+    m_settings->setValue(AutoplayKey, mode.toStdString());
+    if (mode != QLatin1String("off"))
+        m_settings->setValue(AutoplayLastKey, mode.toStdString());
     scheduleSave();
-    emit ytAutoplayChanged();
+    emit autoplayChanged();
+}
+
+void SettingsController::toggleAutoplay()
+{
+    const QString mode = autoplay();
+    if (mode != QLatin1String("off")) {
+        m_settings->setValue(AutoplayLastKey, mode.toStdString());
+        setAutoplay(QStringLiteral("off"));
+        return;
+    }
+    const QString last = QString::fromStdString(m_settings->value(AutoplayLastKey));
+    setAutoplay(isAutoplayMode(last) && last != QLatin1String("off") ? last : QStringLiteral("all"));
+}
+
+bool SettingsController::autoplayYouTube() const
+{
+    const QString mode = autoplay();
+    return mode == QLatin1String("youtube") || mode == QLatin1String("all");
+}
+
+bool SettingsController::autoplayLists() const
+{
+    return autoplay() == QLatin1String("all");
+}
+
+bool SettingsController::autoplayQueue(bool lastIsYouTube) const
+{
+    const QString mode = autoplay();
+    return mode == QLatin1String("all") || mode == QLatin1String("queue")
+           || (lastIsYouTube && mode == QLatin1String("youtube"));
 }
 
 bool SettingsController::appUpdateCheck() const
@@ -938,20 +985,6 @@ void SettingsController::setAppUpdateSkipped(const QString &version)
     m_settings->setValue(AppUpdateSkippedKey, version.toStdString());
     scheduleSave();
     emit appUpdateSkippedChanged();
-}
-
-bool SettingsController::ytQueueMix() const
-{
-    return m_settings->boolValue(YtQueueMixKey, true);
-}
-
-void SettingsController::setYtQueueMix(bool enabled)
-{
-    if (enabled == ytQueueMix())
-        return;
-    m_settings->setBool(YtQueueMixKey, enabled);
-    scheduleSave();
-    emit ytQueueMixChanged();
 }
 
 QString SettingsController::librarySource() const

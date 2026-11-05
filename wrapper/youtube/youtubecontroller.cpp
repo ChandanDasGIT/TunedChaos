@@ -5,10 +5,12 @@
 #include "backend/youtube/linklibrary/linklibrary.h"
 #include "backend/youtube/streamresolver/streamresolver.h"
 #include "backend/youtube/ytdlp/ytdlp.h"
+#include "backend/youtube/ytmatcher/ytmatcher.h"
 #include "backend/youtube/ytmusicclient/ytmusicclient.h"
 #include "wrapper/playlist/playlistcontroller.h"
 #include "wrapper/settings/settingscontroller.h"
 #include "wrapper/youtube/ytdlpmanager.h"
+#include "wrapper/youtube/ytmetadatacontroller.h"
 
 #include <QJSEngine>
 #include <QStandardPaths>
@@ -343,7 +345,7 @@ void YouTubeController::loadLibrary()
 void YouTubeController::play(const QVariantMap &song)
 {
     const QString title = song.value(QStringLiteral("title")).toString();
-    const bool mix = m_settings->ytAutoplay();
+    const bool mix = m_settings->autoplayYouTube();
     m_playlist->playTitled({trackFromMap(song)}, 0, mix ? tr("Mix – %1").arg(title) : title, mix);
 }
 
@@ -352,18 +354,40 @@ void YouTubeController::playList(const QVariantList &songs, int index, const QSt
     std::vector<::Track> tracks;
     for (const QVariant &song : songs)
         tracks.push_back(trackFromMap(song.toMap()));
-    m_playlist->playTitled(std::move(tracks), index, title, m_settings->ytAutoplay());
+    m_playlist->playTitled(std::move(tracks), index, title, m_settings->autoplayYouTube());
 }
 
 // What YouTube plays after `seedPath`: more for the Mix playing, or a Mix for
-// after the Queue's last song.
-void YouTubeController::fetchMore(const QString &seedPath, bool forQueue)
+// after the Queue's / the list's last song. A local or hosted song is first
+// found on YouTube Music (the background lookup's answer, else a search);
+// none found: no Mix (an empty answer).
+void YouTubeController::fetchMore(const QString &seedPath, bool followUp)
 {
-    const std::string videoId = StreamResolver::videoId(seedPath.toStdString());
     const ::Track *seed = m_playlist->trackForPath(seedPath);
-    const QString seedTitle = seed ? QString::fromStdString(seed->title) : QString();
-    runAsync([videoId] { return YtMusicClient::upNext(videoId); },
-             [this, videoId, seedTitle, forQueue](const std::optional<std::vector<YtSong>> &songs) {
+    const ::Track local = seed ? *seed : ::Track{};
+    const QString seedTitle = QString::fromStdString(local.title);
+    std::string known = StreamResolver::isYouTube(seedPath.toStdString()) ? StreamResolver::videoId(seedPath.toStdString())
+                                                                          : std::string();
+    if (known.empty() && m_metadata)
+        known = m_metadata->cachedVideoId(seedPath).toStdString();
+    using Answer = std::pair<std::optional<std::vector<YtSong>>, std::string>; // (up next, the seed's video id)
+    runAsync([known, local]() -> Answer {
+                 std::string videoId = known;
+                 if (videoId.empty()) {
+                     if (local.title.empty())
+                         return {std::vector<YtSong>{}, {}};
+                     const auto results = YtMusicClient::searchSongs(YtMatcher::searchQuery(local));
+                     if (!results)
+                         return {std::nullopt, {}};
+                     const auto song = YtMatcher::bestMatch(local, *results);
+                     if (!song)
+                         return {std::vector<YtSong>{}, {}};
+                     videoId = song->videoId;
+                 }
+                 return {YtMusicClient::upNext(videoId), videoId};
+             },
+             [this, seedPath, seedTitle, followUp](const Answer &answer) {
+                 const auto &[songs, videoId] = answer;
                  if (!songs) {
                      emit notice(errorText("up next"));
                      m_playlist->moreFailed(); // tried again a little later
@@ -373,8 +397,8 @@ void YouTubeController::fetchMore(const QString &seedPath, bool forQueue)
                  for (const YtSong &song : *songs)
                      if (song.videoId != videoId)
                          tracks.push_back(trackFromMap(toVariant(song)));
-                 if (forQueue)
-                     m_playlist->setFollowUp(std::move(tracks), tr("Mix – %1").arg(seedTitle));
+                 if (followUp)
+                     m_playlist->setFollowUp(std::move(tracks), tr("Mix – %1").arg(seedTitle), seedPath);
                  else
                      m_playlist->extendList(tracks);
              });

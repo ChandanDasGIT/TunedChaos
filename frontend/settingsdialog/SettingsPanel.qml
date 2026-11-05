@@ -28,20 +28,22 @@ Rectangle {
         { name: qsTr("Library"), icon: "compactDisc", hue: 0.55, summary: qsTr("Music folders, excluded folders") },
         { name: qsTr("Album art"), icon: "image", hue: 0.95, summary: qsTr("Missing covers and where to find them") },
         { name: qsTr("Lyrics"), icon: "lyrics", hue: 0.13, summary: qsTr("Sources, synced lyrics, script") },
-        { name: qsTr("YouTube Music"), icon: "cloud", hue: 0.0, summary: qsTr("Account, autoplay, audio quality") },
+        { name: qsTr("YouTube Music"), icon: "cloud", hue: 0.0, summary: qsTr("Account, audio quality, lookups") },
         { name: qsTr("Keyboard shortcuts"), icon: "keyboard", hue: 0.7, summary: qsTr("Every key the app knows") },
         { name: qsTr("About"), icon: "info", hue: 0.5, summary: qsTr("Version, your data, backup") },
         { name: qsTr("Layout Customisation"), icon: "layout", hue: 0.75,
           summary: android ? qsTr("Bottom bar, default panel")
                   : qsTr("Bottom bar, panel sides, what opens on start") },
         { name: qsTr("Seekbar"), icon: "wave", hue: 0.3, summary: qsTr("Animation and thumb style") },
-        { name: qsTr("Sleep timer"), icon: "moon", hue: 0.68, summary: qsTr("Pause the music after a while") }
+        { name: qsTr("Sleep timer"), icon: "moon", hue: 0.68, summary: qsTr("Pause the music after a while") },
+        { name: qsTr("Autoplay"), icon: "infinity", hue: 0.45, summary: qsTr("Similar songs after an album, a playlist or the Queue") }
     ]
     // Android has no keyboard to speak of: no Keyboard shortcuts page there
     readonly property bool android: Qt.platform.os === "android"
     readonly property int shortcutsPage: 8
     // The categories in groups, like a phone's settings
-    readonly property var groups: [[0, 1, 12, 2, 10], [3, 11, 5, 6], [4, 7], android ? [9] : [8, 9]]
+    readonly property int autoplayPage: 13
+    readonly property var groups: [[0, 1, 13, 12, 2, 10], [3, 11, 5, 6], [4, 7], android ? [9] : [8, 9]]
 
     readonly property int equalizerPage: 2
     readonly property int libraryPage: 4
@@ -1354,22 +1356,12 @@ Rectangle {
                             SettingsRow {
                                 Layout.fillWidth: true
                                 title: qsTr("Autoplay similar songs")
-                                description: qsTr("After a song, an album or a playlist, keep playing what YouTube Music plays next (a Mix). Playing YouTube songs never adds them to the Queue.")
+                                description: qsTr("When to keep playing what YouTube Music plays next (a Mix): see Settings › Autoplay.")
 
-                                SettingsSwitch {
-                                    checked: SettingsController.ytAutoplay
-                                    onToggled: SettingsController.ytAutoplay = checked
-                                }
-                            }
-
-                            SettingsRow {
-                                Layout.fillWidth: true
-                                title: qsTr("Continue with a Mix when the Queue ends")
-                                description: qsTr("If the Queue's last song is from YouTube, its Mix plays after it. The Queue itself stays as it is.")
-
-                                SettingsSwitch {
-                                    checked: SettingsController.ytQueueMix
-                                    onToggled: SettingsController.ytQueueMix = checked
+                                PillButton {
+                                    text: qsTr("Open")
+                                    implicitHeight: 32
+                                    onClicked: root.openPage(root.autoplayPage)
                                 }
                             }
 
@@ -1801,6 +1793,57 @@ Rectangle {
                                     enabled: SleepTimerController.active
                                     onClicked: SleepTimerController.cancel()
                                 }
+                            }
+                        }
+                    }
+
+                    // ------------------------------------------------------------ Autoplay
+                    SettingsPage {
+                        title: qsTr("Autoplay")
+
+                        SettingsCard {
+                            title: qsTr("Autoplay similar songs")
+
+                            SettingsRow {
+                                Layout.fillWidth: true
+                                title: qsTr("Keep playing after the music ends")
+                                description: {
+                                    switch (SettingsController.autoplay) {
+                                    case "off": return qsTr("Off. Albums, playlists and the Queue stop at their last song.")
+                                    case "youtube": return qsTr("After YouTube songs, albums and playlists, and when the Queue ends on a YouTube song, a Mix of similar songs from YouTube Music plays.")
+                                    case "queue": return qsTr("When the Queue ends, a Mix of songs like its last one plays, whatever that song is. Albums and playlists stop at their end.")
+                                    default: return qsTr("After any album, folder, artist, playlist (local, hosted or YouTube) and the Queue, a Mix of songs like the last one plays.")
+                                    }
+                                }
+                            }
+
+                            Flow {
+                                Layout.fillWidth: true
+                                spacing: 6
+
+                                Repeater {
+                                    model: [
+                                        { id: "off", name: qsTr("Off") },
+                                        { id: "youtube", name: qsTr("YouTube only") },
+                                        { id: "queue", name: qsTr("Queue only") },
+                                        { id: "all", name: qsTr("Everywhere") }
+                                    ]
+
+                                    delegate: PillButton {
+                                        required property var modelData
+
+                                        text: modelData.name
+                                        implicitHeight: 32
+                                        active: SettingsController.autoplay === modelData.id
+                                        onClicked: SettingsController.autoplay = modelData.id
+                                    }
+                                }
+                            }
+
+                            SettingsRow {
+                                Layout.fillWidth: true
+                                title: qsTr("How it finds similar songs")
+                                description: qsTr("A Mix is what YouTube Music plays next after the last song. For your own music it first finds that song on YouTube Music; if it isn't there, the music just stops. The album or playlist itself stays as it is.")
                             }
                         }
                     }

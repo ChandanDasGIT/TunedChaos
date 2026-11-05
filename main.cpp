@@ -181,6 +181,7 @@ int main(int argc, char *argv[])
     CoverController covers(&player, &ytMetadata, &settings, nullptr);
     QObject::connect(&covers, &CoverController::revisionChanged, &coverPalette, &CoverPalette::refresh);
     YouTubeController youtube(&playlist, &settings, nullptr);
+    youtube.setMetadata(&ytMetadata);
     PlaylistsController playlists(&playlist, &player, &settings, nullptr);
     MoodsController moods(&playlist, &player, nullptr);
     LocalLibraryController localLibrary(&playlist, &playlists, &ytMetadata, &settings, nullptr);
