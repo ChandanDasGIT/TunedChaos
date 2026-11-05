@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.OpenableColumns;
@@ -26,6 +27,22 @@ public class OpenedFiles {
     private static native void nativeFilesOpened();
     private static boolean s_listening = false;
 
+    // What a share carries. Android 14+ checks the type (Android 13's own check
+    // had a bug); before that only the older, unchecked call exists.
+    @SuppressWarnings("deprecation")
+    private static Uri sharedFile(Intent intent) {
+        if (Build.VERSION.SDK_INT >= 34)
+            return intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri.class);
+        return intent.getParcelableExtra(Intent.EXTRA_STREAM);
+    }
+
+    @SuppressWarnings("deprecation")
+    private static ArrayList<Uri> sharedFiles(Intent intent) {
+        if (Build.VERSION.SDK_INT >= 34)
+            return intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri.class);
+        return intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+    }
+
     // From MainActivity: an intent that may carry music
     public static void handle(final Context context, Intent intent) {
         if (intent == null)
@@ -34,11 +51,11 @@ public class OpenedFiles {
         if (Intent.ACTION_VIEW.equals(intent.getAction()) && intent.getData() != null) {
             uris.add(intent.getData());
         } else if (Intent.ACTION_SEND.equals(intent.getAction())) {
-            Uri uri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            Uri uri = sharedFile(intent);
             if (uri != null)
                 uris.add(uri);
         } else if (Intent.ACTION_SEND_MULTIPLE.equals(intent.getAction())) {
-            ArrayList<Uri> list = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+            ArrayList<Uri> list = sharedFiles(intent);
             if (list != null)
                 uris.addAll(list);
         }

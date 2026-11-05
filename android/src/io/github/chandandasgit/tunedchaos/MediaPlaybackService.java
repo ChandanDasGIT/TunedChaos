@@ -135,11 +135,17 @@ public class MediaPlaybackService extends Service {
         m_wakeLock.setReferenceCounted(false);
         WifiManager wifi = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         if (wifi != null) {
-            m_wifiLock = wifi.createWifiLock(Build.VERSION.SDK_INT >= 29 ? WifiManager.WIFI_MODE_FULL_LOW_LATENCY
-                                                                          : WifiManager.WIFI_MODE_FULL_HIGH_PERF,
-                                             "TunedChaos:playback");
+            m_wifiLock = wifi.createWifiLock(wifiMode(), "TunedChaos:playback");
             m_wifiLock.setReferenceCounted(false);
         }
+    }
+
+    // Wi-Fi at full speed while streaming. Android 9 has only the older mode
+    // (deprecated since; it still works there).
+    @SuppressWarnings("deprecation")
+    private static int wifiMode() {
+        return Build.VERSION.SDK_INT >= 29 ? WifiManager.WIFI_MODE_FULL_LOW_LATENCY
+                                           : WifiManager.WIFI_MODE_FULL_HIGH_PERF;
     }
 
     // Playing: awake. Not playing: awake for AWAKE_AFTER_STOP_MS more. (Any thread.)
