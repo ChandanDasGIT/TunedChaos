@@ -142,7 +142,7 @@ std::string HttpClient::urlEncode(const std::string &value)
 
 const char *HttpClient::userAgent()
 {
-    return "TunedChaos/1.1.5 (personal music player)";
+    return "TunedChaos/1.1.6 (personal music player)";
 }
 
 #ifdef __ANDROID__
