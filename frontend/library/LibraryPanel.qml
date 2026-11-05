@@ -396,12 +396,43 @@ Rectangle {
                 }
             }
 
-            // ---- Albums (grid of covers)
-            GridView {
+            // ---- Albums (rows of covers; letter headers between them when sorted by name)
+            ListView {
                 id: albumGrid
                 populate: ListPopulate {}
 
                 readonly property int columns: Math.max(2, Math.floor(width / 150))
+                readonly property real cellWidth: width / columns
+                readonly property real cellHeight: cellWidth + 46
+                readonly property bool letters: LocalLibraryController.albumLetters
+                // Each row: a letter header ({ header }) or up to `columns` albums ({ albums, first })
+                readonly property var rows: {
+                    const albums = LocalLibraryController.albums
+                    const out = []
+                    let row = null
+                    let letter = null
+                    for (let i = 0; i < albums.length; ++i) {
+                        if (letters && albums[i].letter !== letter) {
+                            letter = albums[i].letter
+                            out.push({ header: letter })
+                            row = null
+                        }
+                        if (!row || row.albums.length === columns) {
+                            row = { header: "", albums: [], first: i }
+                            out.push(row)
+                        }
+                        row.albums.push(albums[i])
+                    }
+                    return out
+                }
+                // The row showing album `index` (the letter grid jumps by album)
+                function rowOf(index) {
+                    for (let r = rows.length - 1; r >= 0; --r) {
+                        if (rows[r].header === "" && rows[r].first <= index)
+                            return r > 0 && rows[r - 1].header !== "" && rows[r].first === index ? r - 1 : r
+                    }
+                    return 0
+                }
 
                 anchors.fill: parent
                 anchors.leftMargin: Theme.spacing
@@ -415,94 +446,30 @@ Rectangle {
                 flickDeceleration: Theme.flickDeceleration
                 maximumFlickVelocity: Theme.flickVelocity
                 synchronousDrag: true
-                cellWidth: width / columns
-                cellHeight: cellWidth + 46
-                model: LocalLibraryController.albums
+                model: rows
                 ScrollBar.vertical: ScrollBar {}
 
                 delegate: Item {
-                    id: tile
+                    id: albumRow
 
                     required property var modelData
 
-                    width: albumGrid.cellWidth
-                    height: albumGrid.cellHeight
+                    width: ListView.view.width
+                    height: modelData.header !== "" ? header.implicitHeight : albumGrid.cellHeight
 
-                    Rectangle {
-                        anchors.fill: parent
-                        anchors.margins: 4
-                        radius: Theme.radiusLarge
-                        color: tileHover.hovered ? Theme.hover : "transparent"
+                    LetterHeader {
+                        id: header
+                        width: parent.width
+                        visible: albumRow.modelData.header !== ""
+                        letter: albumRow.modelData.header
+                        onTapped: root.openLetters(1, albumGrid)
+                    }
 
-                        Behavior on color { ColorAnimation { duration: Theme.animFast } }
-
-                        HoverHandler { id: tileHover; cursorShape: Qt.PointingHandCursor }
-                        TapHandler { onTapped: LocalLibraryController.showAlbum(tile.modelData.key) }
-
-                        // Hold and drag the whole album onto the Queue or the player
-                        DragSource {
-                            payload: function() {
-                                return { items: LocalLibraryController.albumItems(tile.modelData.key),
-                                         title: tile.modelData.album,
-                                         subtitle: tile.modelData.count === 1 ? qsTr("1 song")
-                                                                             : qsTr("%1 songs").arg(tile.modelData.count),
-                                         cover: Util.coverSource(tile.modelData.coverPath, "") }
-                            }
-                        }
-
-                        Rectangle {
-                            id: cover
-                            x: 6
-                            y: 6
-                            width: parent.width - 12
-                            height: width
-                            radius: Theme.radius
-                            color: Theme.surfaceAlt
-                            clip: true
-                            scale: tileHover.hovered ? 1.03 : 1
-
-                            Behavior on scale { NumberAnimation { duration: Theme.anim; easing.type: Theme.easing } }
-
-                            Icon {
-                                anchors.centerIn: parent
-                                name: "compactDisc"
-                                size: 28
-                                color: Theme.textDim
-                            }
-
-                            Image {
-                                anchors.fill: parent
-                                source: Util.coverSource(tile.modelData.coverPath, "")
-                                sourceSize: Qt.size(280, 280)
-                                fillMode: Image.PreserveAspectCrop
-                                asynchronous: true
-                                opacity: status === Image.Ready ? 1 : 0
-
-                                Behavior on opacity { NumberAnimation { duration: Theme.anim } }
-                            }
-                        }
-
-                        Label {
-                            anchors.top: cover.bottom
-                            anchors.topMargin: 6
-                            x: 8
-                            width: parent.width - 16
-                            text: tile.modelData.album
-                            color: Theme.text
-                            font.pixelSize: Theme.fontSize
-                            font.weight: Font.DemiBold
-                            elide: Text.ElideRight
-                        }
-
-                        Label {
-                            anchors.top: cover.bottom
-                            anchors.topMargin: 24
-                            x: 8
-                            width: parent.width - 16
-                            text: tile.modelData.artist
-                            color: Theme.textMuted
-                            font.pixelSize: Theme.fontSizeSmall
-                            elide: Text.ElideRight
+                    Row {
+                        visible: albumRow.modelData.header === ""
+                        Repeater {
+                            model: albumRow.modelData.albums ?? []
+                            delegate: AlbumTile { width: albumGrid.cellWidth; height: albumGrid.cellHeight }
                         }
                     }
                 }
@@ -904,10 +871,95 @@ Rectangle {
         z: 50
         onChosen: (row) => {
             if (view)
-                view.positionViewAtIndex(row, ListView.Beginning)
+                view.positionViewAtIndex(view.rowOf ? view.rowOf(row) : row, ListView.Beginning)
             visible = false
         }
         onClosed: visible = false
+    }
+
+    // One album in the Albums tab: its cover, name and artist.
+    component AlbumTile: Item {
+        id: tile
+
+        required property var modelData
+
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: 4
+            radius: Theme.radiusLarge
+            color: tileHover.hovered ? Theme.hover : "transparent"
+
+            Behavior on color { ColorAnimation { duration: Theme.animFast } }
+
+            HoverHandler { id: tileHover; cursorShape: Qt.PointingHandCursor }
+            TapHandler { onTapped: LocalLibraryController.showAlbum(tile.modelData.key) }
+
+            // Hold and drag the whole album onto the Queue or the player
+            DragSource {
+                payload: function() {
+                    return { items: LocalLibraryController.albumItems(tile.modelData.key),
+                             title: tile.modelData.album,
+                             subtitle: tile.modelData.count === 1 ? qsTr("1 song")
+                                                                 : qsTr("%1 songs").arg(tile.modelData.count),
+                             cover: Util.coverSource(tile.modelData.coverPath, "") }
+                }
+            }
+
+            Rectangle {
+                id: cover
+                x: 6
+                y: 6
+                width: parent.width - 12
+                height: width
+                radius: Theme.radius
+                color: Theme.surfaceAlt
+                clip: true
+                scale: tileHover.hovered ? 1.03 : 1
+
+                Behavior on scale { NumberAnimation { duration: Theme.anim; easing.type: Theme.easing } }
+
+                Icon {
+                    anchors.centerIn: parent
+                    name: "compactDisc"
+                    size: 28
+                    color: Theme.textDim
+                }
+
+                Image {
+                    anchors.fill: parent
+                    source: Util.coverSource(tile.modelData.coverPath, "")
+                    sourceSize: Qt.size(280, 280)
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    opacity: status === Image.Ready ? 1 : 0
+
+                    Behavior on opacity { NumberAnimation { duration: Theme.anim } }
+                }
+            }
+
+            Label {
+                anchors.top: cover.bottom
+                anchors.topMargin: 6
+                x: 8
+                width: parent.width - 16
+                text: tile.modelData.album
+                color: Theme.text
+                font.pixelSize: Theme.fontSize
+                font.weight: Font.DemiBold
+                elide: Text.ElideRight
+            }
+
+            Label {
+                anchors.top: cover.bottom
+                anchors.topMargin: 24
+                x: 8
+                width: parent.width - 16
+                text: tile.modelData.artist
+                color: Theme.textMuted
+                font.pixelSize: Theme.fontSizeSmall
+                elide: Text.ElideRight
+            }
+        }
     }
 
     component SongList: ListView {

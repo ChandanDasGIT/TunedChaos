@@ -392,7 +392,8 @@ void LocalLibraryController::setTracks(std::vector<Track> tracks)
                                     {QStringLiteral("coverPath"), album.coverPath},
                                     {QStringLiteral("count"), album.count},
                                     {QStringLiteral("addedAt"), qint64(album.addedAt)},
-                                    {QStringLiteral("modifiedAt"), qint64(album.modifiedAt)}});
+                                    {QStringLiteral("modifiedAt"), qint64(album.modifiedAt)},
+                                    {QStringLiteral("letter"), letterOf(album.name)}});
     }
     // Recently added: the same albums, newest first
     constexpr int RecentlyAddedCount = 12;
@@ -824,6 +825,11 @@ static bool byName(const QString &sort)
     return sort == QLatin1String("name") || sort == QLatin1String("nameDesc");
 }
 
+bool LocalLibraryController::albumLetters() const
+{
+    return m_settings->letterGroups() && byName(m_settings->albumSort());
+}
+
 bool LocalLibraryController::artistLetters() const
 {
     return m_settings->letterGroups() && byName(m_settings->artistSort());
@@ -846,7 +852,8 @@ QVariantMap LocalLibraryController::letterStarts(int tab) const
         }
         return starts;
     }
-    const QVariantList &list = tab == 2 ? m_artists : m_genres;
+    // The lists as shown (searched and sorted), so the rows match the view
+    const QVariantList &list = tab == 1 ? m_shownAlbums : tab == 2 ? m_shownArtists : m_shownGenres;
     for (int i = 0; i < list.size(); ++i) {
         const QString letter = list[i].toMap().value(QStringLiteral("letter")).toString();
         if (!starts.contains(letter))

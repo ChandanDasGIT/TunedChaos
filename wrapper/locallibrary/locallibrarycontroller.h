@@ -45,6 +45,7 @@ class LocalLibraryController : public QObject
     // Letter groups shown per tab (Settings > Library on, and the tab sorted by name).
     // Albums / artists / genres carry "letter" too, songs a "letter" role.
     Q_PROPERTY(bool songLetters READ songLetters NOTIFY lettersChanged)
+    Q_PROPERTY(bool albumLetters READ albumLetters NOTIFY lettersChanged)
     Q_PROPERTY(bool artistLetters READ artistLetters NOTIFY lettersChanged)
     Q_PROPERTY(bool genreLetters READ genreLetters NOTIFY lettersChanged)
     // Songs in no genre (they aren't in `genres`)
@@ -77,6 +78,7 @@ public:
 
     LibrarySongsModel *songs() const { return m_songs.get(); }
     bool songLetters() const;
+    bool albumLetters() const;
     bool artistLetters() const;
     bool genreLetters() const;
     // Where each letter starts in a tab's list (0 songs, 2 artists, 3 genres): { "A": 0, "B": 12, ... }
