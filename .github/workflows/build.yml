@@ -36,8 +36,17 @@ jobs:
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg-cache
     steps:
       - uses: actions/checkout@v5
+      # Microsoft's compiler: its environment (vcvars64.bat) for the steps after
+      # this one. (No action for it: the usual one still runs on Node 20.)
       - name: Microsoft's compiler
-        uses: ilammy/msvc-dev-cmd@v1
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * `
+              -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { Write-Error "Visual Studio's C++ tools not found"; exit 1 }
+          cmd /c "`"$vs\VC\Auxiliary\Build\vcvars64.bat`" >nul && set" | ForEach-Object {
+              if ($_ -match '^([^=]+)=(.*)$') { "$($Matches[1])=$($Matches[2])" | Out-File $env:GITHUB_ENV -Append -Encoding utf8 }
+          }
       # Qt 6.10: the installer behind this action (aqtinstall 3.3) can't read Qt
       # 6.11's download layout yet. The app needs Qt 6.10+; move to 6.11 here
       # once aqtinstall supports it.
@@ -57,7 +66,7 @@ jobs:
           mkdir -p "$VCPKG_DEFAULT_BINARY_CACHE"
       - name: Built libraries from earlier runs
         id: libraries
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: ${{ github.workspace }}/vcpkg-cache
           key: vcpkg-windows-${{ hashFiles('release/vcpkg.json') }}
@@ -69,7 +78,7 @@ jobs:
       # Kept even if our build fails below, so the next run doesn't rebuild them
       - name: Keep the built libraries
         if: always() && steps.libraries.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: ${{ github.workspace }}/vcpkg-cache
           key: vcpkg-windows-${{ hashFiles('release/vcpkg.json') }}
@@ -114,7 +123,7 @@ jobs:
           Write-Output "The app was still running after 20 seconds"
       - name: Upload the ZIP
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: TunedChaos-windows-x64
           path: dist/
@@ -151,7 +160,7 @@ jobs:
           if (Test-Path $shortcut) { Write-Error "Start menu entry left behind"; exit 1 }
           Write-Output "Installed, started and uninstalled"
       - name: Upload the installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: TunedChaos-windows-x64-setup
           path: installer/*.exe
@@ -167,13 +176,13 @@ jobs:
       NDK_VERSION: 27.2.12479018
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
       # Chaquopy installs yt-dlp into the app with the same Python version the
       # app carries (android/build.gradle: 3.14)
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.14'
       - name: Android SDK parts
@@ -200,7 +209,7 @@ jobs:
           mkdir -p "$VCPKG_DEFAULT_BINARY_CACHE"
       - name: Built libraries from earlier runs
         id: libraries
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: ${{ github.workspace }}/vcpkg-cache
           key: vcpkg-android-arm64-${{ hashFiles('release/vcpkg.json') }}
@@ -210,7 +219,7 @@ jobs:
       # Kept even if our build fails below, so the next run doesn't rebuild them
       - name: Keep the built libraries
         if: always() && steps.libraries.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: ${{ github.workspace }}/vcpkg-cache
           key: vcpkg-android-arm64-${{ hashFiles('release/vcpkg.json') }}
@@ -239,7 +248,7 @@ jobs:
               --out "apk/TunedChaos-$version-arm64.apk" "$RUNNER_TEMP/aligned.apk"
           "$tools/apksigner" verify --print-certs "apk/TunedChaos-$version-arm64.apk" | grep -m2 "SHA-256\|DN"
       - name: Upload the APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: TunedChaos-android-arm64
           path: apk/*.apk
@@ -282,7 +291,7 @@ jobs:
           QMAKE: ${{ env.QT_ROOT_DIR }}/bin/qmake
         run: release/linux/make-packages.sh build/linux-release dist
       - name: Upload the packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: TunedChaos-linux-x86_64
           path: |
@@ -306,7 +315,7 @@ jobs:
             image: ubuntu:24.04
             setup: |
               apt-get update
-              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends xz-utils \
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends xz-utils libgl1 \
                 libpipewire-0.3-0t64 libglx0 libopengl0 libegl1 libx11-6 libx11-xcb1 libdrm2 libfontconfig1 \
                 libfreetype6 libharfbuzz0b libfribidi0 libxcb1 libxcb-dri3-0 libice6 libsm6 libwayland-client0
           - name: Fedora
@@ -319,7 +328,7 @@ jobs:
       image: ${{ matrix.image }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: TunedChaos-linux-x86_64
           path: packages
@@ -363,7 +372,7 @@ jobs:
               exit 1
           fi
           echo "version=$version" >> "$GITHUB_ENV"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: artifacts
       - name: Gather the packages
@@ -376,7 +385,7 @@ jobs:
           # All six, or no release (a signed APK among them: unsigned ones are named differently)
           [ "$(ls release-files | wc -l)" -eq 6 ]
           (cd release-files && sha256sum -- * > SHA256SUMS.txt)
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           name: Tuned Chaos ${{ github.ref_name }}
           prerelease: ${{ contains(github.ref_name, '-') }}
