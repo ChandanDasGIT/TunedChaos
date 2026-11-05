@@ -14,7 +14,7 @@ struct UpdateAsset
     std::string name;
     std::string url;
     long long size = 0;
-    std::string sha256; // "" = GitHub didn't say
+    std::string sha256; // "" = GitHub didn't say (then it's never downloaded)
 };
 
 struct UpdateRelease
@@ -30,14 +30,14 @@ struct UpdateRelease
 
 namespace AppUpdate {
 
-// GitHub's newest release (TUNEDCHAOS_UPDATE_URL replaces the address, for tests).
+// GitHub's newest release (debug builds: TUNEDCHAOS_UPDATE_URL replaces the address, for tests).
 std::optional<UpdateRelease> latest();
 
 std::string versionOfTag(const std::string &tag); // "v1.2" -> "1.2"; "" if not a version
 bool isNewer(const std::string &version, const std::string &running); // 1.10 > 1.9, 1.1.0 == 1.1
 
 // Saves the asset as `target` (via target + ".part", which a later call
-// carries on from) and checks its size and checksum. "" when it's ready, else
+// carries on from) and checks its size and checksum (refused without one). "" when it's ready, else
 // what went wrong; "" too when `cancelled` stopped it (the target then doesn't exist).
 std::string download(const UpdateAsset &asset, const std::string &target, const std::atomic_bool &cancelled,
                      const std::function<void(int percent)> &progress);

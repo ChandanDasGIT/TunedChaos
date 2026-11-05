@@ -41,7 +41,7 @@ bool complete(const std::string &path, const UpdateAsset &asset)
     if (fs::file_size(path, ec) != (uintmax_t)asset.size || ec)
         return false;
     if (asset.sha256.empty())
-        return true;
+        return false; // nothing to check it against: never install it
     const std::optional<std::string> sum = Sha256::ofFile(path);
     return sum && *sum == asset.sha256;
 }
@@ -74,9 +74,15 @@ bool AppUpdate::isNewer(const std::string &version, const std::string &running)
 
 std::optional<UpdateRelease> AppUpdate::latest()
 {
+#ifndef NDEBUG
+    // Tests only: debug builds can ask a stand-in server (release builds can't
+    // be pointed at another source of "updates")
     const char *custom = std::getenv("TUNEDCHAOS_UPDATE_URL");
-    const HttpResponse response = HttpClient::get(custom && *custom ? custom : LatestUrl,
-                                                  {"Accept: application/vnd.github+json"}, 15000);
+    const std::string url = custom && *custom ? custom : LatestUrl;
+#else
+    const std::string url = LatestUrl;
+#endif
+    const HttpResponse response = HttpClient::get(url, {"Accept: application/vnd.github+json"}, 15000);
     if (!response.ok())
         return std::nullopt;
     const json release = json::parse(response.body, nullptr, false);
@@ -108,6 +114,9 @@ std::optional<UpdateRelease> AppUpdate::latest()
 std::string AppUpdate::download(const UpdateAsset &asset, const std::string &target, const std::atomic_bool &cancelled,
                                 const std::function<void(int)> &progress)
 {
+    // GitHub gives every file a checksum; without one the file can't be checked
+    if (asset.sha256.empty())
+        return "This update can't be checked, so it won't be installed. Get it from the release page instead.";
     const std::string part = target + ".part";
     std::error_code ec;
     fs::create_directories(fs::path(target).parent_path(), ec);
