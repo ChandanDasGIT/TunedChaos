@@ -19,6 +19,7 @@ Text {
         case "volumeLow": return "\uf027"
         case "volumeMute": return "\uf6a9"
         case "list": return "\uf03a"
+        case "grid": return "\uf00a"
         case "thumbtack": return "\uf08d"
         case "music": return "\uf001"
         case "folderOpen": return "\uf07c"

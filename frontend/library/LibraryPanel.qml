@@ -83,6 +83,26 @@ Rectangle {
         id: addAllMenu
     }
 
+    // The tabs in the order shown (their numbers stay: sorts and views are kept by them)
+    readonly property var tabOrder: [0, 1, 4, 2, 3]
+    function tabPosition(t) { return tabOrder.indexOf(t) }
+    // Each tab shown as a list or a grid of tiles (Settings: library.view.local.<tab>)
+    readonly property var viewKeys: ["local.songs", "local.albums", "local.artists", "local.genres", "local.folders"]
+    function gridView(t) { return SettingsController.libraryViews[viewKeys[t]] === true }
+
+    // A grid tile's song menu (one for all of them)
+    LibrarySongMenu {
+        id: gridSongMenu
+        onDetailsRequested: (path) => root.detailsRequested(path)
+        onEditTagsRequested: (path) => root.editTagsRequested(path)
+    }
+    function openSongMenu(button, list, index, path) {
+        gridSongMenu.list = list
+        gridSongMenu.index = index
+        gridSongMenu.path = path
+        gridSongMenu.popup(button, 0, button.height)
+    }
+
     // Which setting the sort button changes: each tab remembers its own.
     readonly property string sortSetting: ["librarySort", "albumSort", "artistSort", "genreSort", "folderSort"][tab]
 
@@ -276,15 +296,15 @@ Rectangle {
             Layout.fillWidth: true
             Layout.margins: Theme.padding
             Layout.bottomMargin: 4
-            current: root.tab
+            current: root.tabPosition(root.tab)
             tabs: [
                 { icon: "music", label: qsTr("Songs") },
                 { icon: "compactDisc", label: qsTr("Albums") },
+                { icon: "folder", label: qsTr("Folders") },
                 { icon: "user", label: qsTr("Artists") },
-                { icon: "music", label: qsTr("Genres") },
-                { icon: "folder", label: qsTr("Folders") }
+                { icon: "music", label: qsTr("Genres") }
             ]
-            onTabPicked: (index) => root.tab = index
+            onTabPicked: (index) => root.tab = root.tabOrder[index]
         }
 
         // Scan progress
@@ -357,6 +377,17 @@ Rectangle {
                 }
             }
 
+            // List or grid, for this tab
+            ControlButton {
+                readonly property bool grid: root.gridView(root.tab)
+                iconName: grid ? "list" : "grid"
+                iconSize: 14
+                iconColor: Theme.textMuted
+                ToolTip.visible: hovered
+                ToolTip.text: grid ? qsTr("Show as a list") : qsTr("Show as a grid")
+                onClicked: SettingsController.setGridView(root.viewKeys[root.tab], !grid)
+            }
+
             ControlButton {
                 id: sortButton
                 iconName: "sortList"
@@ -388,104 +419,99 @@ Rectangle {
                 Behavior on opacity { NumberAnimation { duration: Theme.anim } }
 
                 SongList {
+                    id: songsList
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    visible: !root.gridView(0)
                     model: LocalLibraryController.songs
                     list: LocalLibraryController.SongsList
                     letters: LocalLibraryController.songLetters
                 }
+
+                SongGrid {
+                    id: songsGrid
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    visible: root.gridView(0)
+                    songs: LocalLibraryController.songs
+                    list: LocalLibraryController.SongsList
+                    letterStarts: LocalLibraryController.songLetters
+                                  ? LocalLibraryController.allLetterStarts[0] : null
+                    onLetterTapped: root.openLetters(0, songsGrid)
+                }
             }
 
-            // ---- Albums (rows of covers; letter headers between them when sorted by name)
-            ListView {
+            // ---- Albums: a grid of covers or a list (letter headers when sorted by name)
+            TileGrid {
                 id: albumGrid
-                populate: ListPopulate {}
-
-                readonly property int columns: Math.max(2, Math.floor(width / 150))
-                readonly property real cellWidth: width / columns
-                readonly property real cellHeight: cellWidth + 46
-                readonly property bool letters: LocalLibraryController.albumLetters
-                // Each row: a letter header ({ header }) or up to `columns` albums ({ albums, first })
-                readonly property var rows: {
-                    const albums = LocalLibraryController.albums
-                    const out = []
-                    let row = null
-                    let letter = null
-                    for (let i = 0; i < albums.length; ++i) {
-                        if (letters && albums[i].letter !== letter) {
-                            letter = albums[i].letter
-                            out.push({ header: letter })
-                            row = null
-                        }
-                        if (!row || row.albums.length === columns) {
-                            row = { header: "", albums: [], first: i }
-                            out.push(row)
-                        }
-                        row.albums.push(albums[i])
-                    }
-                    return out
-                }
-                // The row showing album `index` (the letter grid jumps by album)
-                function rowOf(index) {
-                    for (let r = rows.length - 1; r >= 0; --r) {
-                        if (rows[r].header === "" && rows[r].first <= index)
-                            return r > 0 && rows[r - 1].header !== "" && rows[r].first === index ? r - 1 : r
-                    }
-                    return 0
-                }
-
                 anchors.fill: parent
                 anchors.leftMargin: Theme.spacing
                 anchors.rightMargin: Theme.spacing
-                opacity: root.tab === 1 && !root.inDetail ? 1 : 0
+                opacity: root.tab === 1 && !root.inDetail && root.gridView(1) ? 1 : 0
                 visible: opacity > 0
                 transform: PageShift { page: 1 }
                 Behavior on opacity { NumberAnimation { duration: Theme.anim } }
-                clip: true
-                boundsBehavior: Flickable.StopAtBounds
-                flickDeceleration: Theme.flickDeceleration
-                maximumFlickVelocity: Theme.flickVelocity
-                synchronousDrag: true
-                model: rows
-                ScrollBar.vertical: ScrollBar {}
+                itemCount: LocalLibraryController.albums.length
+                letterStarts: LocalLibraryController.albumLetters
+                              ? LocalLibraryController.allLetterStarts[1] : null
+                onLetterTapped: root.openLetters(1, albumGrid)
 
-                delegate: Item {
-                    id: albumRow
+                tile: Component {
+                    LibraryTile {
+                        required property var modelData
+                        readonly property var album: LocalLibraryController.albums[modelData] ?? ({})
 
-                    required property var modelData
-
-                    width: ListView.view.width
-                    height: modelData.header !== "" ? header.implicitHeight : albumGrid.cellHeight
-
-                    LetterHeader {
-                        id: header
-                        width: parent.width
-                        visible: albumRow.modelData.header !== ""
-                        letter: albumRow.modelData.header
-                        onTapped: root.openLetters(1, albumGrid)
-                    }
-
-                    Row {
-                        visible: albumRow.modelData.header === ""
-                        Repeater {
-                            model: albumRow.modelData.albums ?? []
-                            delegate: AlbumTile { width: albumGrid.cellWidth; height: albumGrid.cellHeight }
+                        image: Util.coverSource(album.coverPath || "", "")
+                        icon: "compactDisc"
+                        title: album.album || ""
+                        subtitle: album.artist || ""
+                        onTapped: LocalLibraryController.showAlbum(album.key)
+                        dragPayload: function() {
+                            return { items: LocalLibraryController.albumItems(album.key), title: album.album,
+                                     subtitle: Util.songCount(album.count), cover: Util.coverSource(album.coverPath, "") }
                         }
                     }
                 }
             }
 
+            EntryList {
+                page: 1
+                shown: !root.gridView(1)
+                albums: true
+                letters: LocalLibraryController.albumLetters
+                model: LocalLibraryController.albums
+                onEntryOpened: (key) => LocalLibraryController.showAlbum(key)
+            }
+
             // ---- Artists
+            EntryGrid {
+                page: 2
+                icon: "user"
+                entries: LocalLibraryController.artists
+                letters: LocalLibraryController.artistLetters
+                onEntryOpened: (name) => LocalLibraryController.showArtist(name)
+            }
+
             EntryList {
                 page: 2
+                shown: !root.gridView(2)
                 letters: LocalLibraryController.artistLetters
                 model: LocalLibraryController.artists
                 onEntryOpened: (name) => LocalLibraryController.showArtist(name)
             }
 
             // ---- Genres
+            EntryGrid {
+                page: 3
+                icon: "music"
+                entries: LocalLibraryController.genres
+                letters: LocalLibraryController.genreLetters
+                onEntryOpened: (name) => LocalLibraryController.showGenre(name)
+            }
+
             EntryList {
                 page: 3
+                shown: !root.gridView(3)
                 letters: LocalLibraryController.genreLetters
                 model: LocalLibraryController.genres
                 note: LocalLibraryController.songsWithoutGenre > 0
@@ -705,8 +731,53 @@ Rectangle {
                 }
 
                 // Subfolders first, then the songs, in one scrolling list
+                // As a grid: the subfolders' tiles, then the songs'
+                TileGrid {
+                    id: folderGrid
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.leftMargin: Theme.spacing
+                    Layout.rightMargin: Theme.spacing
+                    visible: root.gridView(4)
+                    readonly property int folderCount: LocalLibraryController.subfolders.length
+                    itemCount: folderCount + LocalLibraryController.folderSongs.count
+                    revision: LocalLibraryController.subfolders
+
+                    tile: Component {
+                        Loader {
+                            id: folderCell
+                            required property var modelData
+                            readonly property bool isFolder: modelData < folderGrid.folderCount
+                            sourceComponent: isFolder ? folderTile : songTile
+
+                            Component {
+                                id: folderTile
+                                LibraryTile {
+                                    readonly property var folder: LocalLibraryController.subfolders[folderCell.modelData] ?? ({})
+                                    icon: "folder"
+                                    title: folder.name || ""
+                                    subtitle: folder.location || Util.songCount(folder.count || 0)
+                                    onTapped: {
+                                        LocalLibraryController.openFolder(folder.path)
+                                        folderGrid.positionViewAtBeginning()
+                                    }
+                                }
+                            }
+                            Component {
+                                id: songTile
+                                SongTile {
+                                    songs: LocalLibraryController.folderSongs
+                                    list: LocalLibraryController.FolderList
+                                    index: folderCell.modelData - folderGrid.folderCount
+                                }
+                            }
+                        }
+                    }
+                }
+
                 ListView {
                     id: folderView
+                    visible: !root.gridView(4)
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     Layout.leftMargin: Theme.spacing
@@ -877,87 +948,71 @@ Rectangle {
         onClosed: visible = false
     }
 
-    // One album in the Albums tab: its cover, name and artist.
-    component AlbumTile: Item {
-        id: tile
+    // A song's tile in a grid: tap plays the list it's in from it, "⋮" opens its menu.
+    component SongTile: LibraryTile {
+        id: songTileRoot
+        required property var songs // a LibrarySongsModel
+        property int list: LocalLibraryController.SongsList
+        required property int index
+        readonly property var song: (songs.count, songs.get(index))
+        current: PlayerController.source === (song.path || "")
+        image: Util.coverSource(song.path || "", "")
+        icon: "music"
+        title: song.title || ""
+        subtitle: song.artist || ""
+        showMore: true
+        onTapped: current ? PlayerController.togglePlayPause() : LocalLibraryController.play(list, index)
+        onMoreRequested: (button) => root.openSongMenu(button, list, index, song.path)
+        dragPayload: function() {
+            return { items: [{ path: song.path }], title: song.title, subtitle: song.artist,
+                     cover: Util.coverSource(song.path, "") }
+        }
+    }
 
-        required property var modelData
-
-        Rectangle {
-            anchors.fill: parent
-            anchors.margins: 4
-            radius: Theme.radiusLarge
-            color: tileHover.hovered ? Theme.hover : "transparent"
-
-            Behavior on color { ColorAnimation { duration: Theme.animFast } }
-
-            HoverHandler { id: tileHover; cursorShape: Qt.PointingHandCursor }
-            TapHandler { onTapped: LocalLibraryController.showAlbum(tile.modelData.key) }
-
-            // Hold and drag the whole album onto the Queue or the player
-            DragSource {
-                payload: function() {
-                    return { items: LocalLibraryController.albumItems(tile.modelData.key),
-                             title: tile.modelData.album,
-                             subtitle: tile.modelData.count === 1 ? qsTr("1 song")
-                                                                 : qsTr("%1 songs").arg(tile.modelData.count),
-                             cover: Util.coverSource(tile.modelData.coverPath, "") }
-                }
+    // Songs as a grid of covers
+    component SongGrid: TileGrid {
+        id: songGridRoot
+        required property var songs
+        property int list: LocalLibraryController.SongsList
+        itemCount: songs.count
+        revision: LocalLibraryController.allLetterStarts // (changes with every search / sort)
+        tile: Component {
+            SongTile {
+                required property var modelData
+                songs: songGridRoot.songs
+                list: songGridRoot.list
+                index: modelData
             }
+        }
+    }
 
-            Rectangle {
-                id: cover
-                x: 6
-                y: 6
-                width: parent.width - 12
-                height: width
-                radius: Theme.radius
-                color: Theme.surfaceAlt
-                clip: true
-                scale: tileHover.hovered ? 1.03 : 1
+    // Artists / genres as a grid of icon tiles (shown instead of their EntryList)
+    component EntryGrid: TileGrid {
+        id: entryGridRoot
+        required property int page
+        required property var entries
+        property string icon: "user"
+        property bool letters: false
+        signal entryOpened(string name)
 
-                Behavior on scale { NumberAnimation { duration: Theme.anim; easing.type: Theme.easing } }
-
-                Icon {
-                    anchors.centerIn: parent
-                    name: "compactDisc"
-                    size: 28
-                    color: Theme.textDim
-                }
-
-                Image {
-                    anchors.fill: parent
-                    source: Util.coverSource(tile.modelData.coverPath, "")
-                    sourceSize: Qt.size(280, 280)
-                    fillMode: Image.PreserveAspectCrop
-                    asynchronous: true
-                    opacity: status === Image.Ready ? 1 : 0
-
-                    Behavior on opacity { NumberAnimation { duration: Theme.anim } }
-                }
-            }
-
-            Label {
-                anchors.top: cover.bottom
-                anchors.topMargin: 6
-                x: 8
-                width: parent.width - 16
-                text: tile.modelData.album
-                color: Theme.text
-                font.pixelSize: Theme.fontSize
-                font.weight: Font.DemiBold
-                elide: Text.ElideRight
-            }
-
-            Label {
-                anchors.top: cover.bottom
-                anchors.topMargin: 24
-                x: 8
-                width: parent.width - 16
-                text: tile.modelData.artist
-                color: Theme.textMuted
-                font.pixelSize: Theme.fontSizeSmall
-                elide: Text.ElideRight
+        anchors.fill: parent
+        anchors.leftMargin: Theme.spacing
+        anchors.rightMargin: Theme.spacing
+        opacity: root.tab === page && !root.inDetail && root.gridView(page) ? 1 : 0
+        visible: opacity > 0
+        transform: PageShift { page: entryGridRoot.page }
+        Behavior on opacity { NumberAnimation { duration: Theme.anim } }
+        itemCount: entries.length
+        letterStarts: letters ? LocalLibraryController.allLetterStarts[page] : null
+        onLetterTapped: root.openLetters(page, entryGridRoot)
+        tile: Component {
+            LibraryTile {
+                required property var modelData
+                readonly property var entry: entryGridRoot.entries[modelData] ?? ({})
+                icon: entryGridRoot.icon
+                title: entry.name || ""
+                subtitle: Util.songCount(entry.count || 0)
+                onTapped: entryGridRoot.entryOpened(entry.name)
             }
         }
     }
@@ -1012,6 +1067,8 @@ Rectangle {
         required property int page
         property string note // a line above the list
         property bool letters: false // letter headers (sorted by name)
+        property bool shown: true    // (false: the tab shows its grid instead)
+        property bool albums: false  // albums: their covers, names and artists (opened by key)
 
         signal entryOpened(string name)
 
@@ -1019,7 +1076,7 @@ Rectangle {
         anchors.fill: parent
         anchors.leftMargin: Theme.spacing
         anchors.rightMargin: Theme.spacing
-        opacity: root.tab === page && !root.inDetail ? 1 : 0
+        opacity: root.tab === page && !root.inDetail && shown ? 1 : 0
         visible: opacity > 0
         transform: PageShift { page: entries.page }
         Behavior on opacity { NumberAnimation { duration: Theme.anim } }
@@ -1078,7 +1135,7 @@ Rectangle {
                 Behavior on color { ColorAnimation { duration: Theme.animFast } }
 
                 HoverHandler { id: artistHover; cursorShape: Qt.PointingHandCursor }
-                TapHandler { onTapped: entries.entryOpened(artistRow.modelData.name) }
+                TapHandler { onTapped: entries.entryOpened(entries.albums ? artistRow.modelData.key : artistRow.modelData.name) }
 
                 RowLayout {
                     anchors.fill: parent
@@ -1087,26 +1144,49 @@ Rectangle {
                     spacing: Theme.padding
 
                     Rectangle {
-                        Layout.preferredWidth: 36
-                        Layout.preferredHeight: 36
-                        radius: 18
-                        color: Theme.accentSoft
+                        Layout.preferredWidth: entries.albums ? 40 : 36
+                        Layout.preferredHeight: entries.albums ? 40 : 36
+                        radius: entries.albums ? Theme.radius : 18
+                        color: entries.albums ? Theme.surfaceAlt : Theme.accentSoft
+                        clip: true
+
+                        Image {
+                            anchors.fill: parent
+                            visible: entries.albums
+                            source: entries.albums ? Util.coverSource(artistRow.modelData.coverPath || "", "") : ""
+                            sourceSize: Qt.size(80, 80)
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                        }
 
                         Label {
                             anchors.centerIn: parent
-                            text: artistRow.modelData.name.charAt(0).toUpperCase()
+                            visible: !entries.albums
+                            text: (artistRow.modelData.name || "").charAt(0).toUpperCase()
                             color: Theme.accent
                             font.pixelSize: Theme.fontSizeLarge
                             font.weight: Font.DemiBold
                         }
                     }
 
-                    Label {
+                    Column {
                         Layout.fillWidth: true
-                        text: artistRow.modelData.name
-                        color: Theme.text
-                        font.pixelSize: Theme.fontSize
-                        elide: Text.ElideRight
+
+                        Label {
+                            width: parent.width
+                            text: entries.albums ? artistRow.modelData.album : artistRow.modelData.name
+                            color: Theme.text
+                            font.pixelSize: Theme.fontSize
+                            elide: Text.ElideRight
+                        }
+                        Label {
+                            width: parent.width
+                            visible: entries.albums
+                            text: artistRow.modelData.artist || ""
+                            color: Theme.textMuted
+                            font.pixelSize: Theme.fontSizeSmall
+                            elide: Text.ElideRight
+                        }
                     }
 
                     Label {
@@ -1127,7 +1207,7 @@ Rectangle {
 
     component PageShift: Translate {
         required property int page
-        x: root.tab === page ? 0 : (page < root.tab ? -48 : 48)
+        x: root.tab === page ? 0 : (root.tabPosition(page) < root.tabPosition(root.tab) ? -48 : 48)
         Behavior on x { NumberAnimation { duration: Theme.animSlow; easing.type: Theme.easingPanel } }
     }
 }

@@ -364,6 +364,8 @@ qt_add_qml_module(TunedChaos
         frontend/hosted/HostedRow.qml
         frontend/library/LetterHeader.qml
         frontend/library/LetterJumpGrid.qml
+        frontend/library/LibraryTile.qml
+        frontend/library/TileGrid.qml
         frontend/library/LibrarySongRow.qml
         frontend/library/LibrarySourceChooser.qml
         frontend/lyrics/LyricsView.qml

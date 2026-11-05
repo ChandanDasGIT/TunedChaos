@@ -46,6 +46,8 @@ class LocalLibraryController : public QObject
     // Albums / artists / genres carry "letter" too, songs a "letter" role.
     Q_PROPERTY(bool songLetters READ songLetters NOTIFY lettersChanged)
     Q_PROPERTY(bool albumLetters READ albumLetters NOTIFY lettersChanged)
+    // letterStarts() of the Songs, Albums, Artists and Genres tabs, kept up to date (for the grids)
+    Q_PROPERTY(QVariantList allLetterStarts READ allLetterStarts NOTIFY shownChanged)
     Q_PROPERTY(bool artistLetters READ artistLetters NOTIFY lettersChanged)
     Q_PROPERTY(bool genreLetters READ genreLetters NOTIFY lettersChanged)
     // Songs in no genre (they aren't in `genres`)
@@ -83,6 +85,10 @@ public:
     bool genreLetters() const;
     // Where each letter starts in a tab's list (0 songs, 2 artists, 3 genres): { "A": 0, "B": 12, ... }
     Q_INVOKABLE QVariantMap letterStarts(int tab) const;
+    QVariantList allLetterStarts() const
+    {
+        return {letterStarts(0), letterStarts(1), letterStarts(2), letterStarts(3)};
+    }
     LibrarySongsModel *detailSongs() const { return m_detail.get(); }
     QString search() const { return m_search; }
     void setSearch(const QString &search);

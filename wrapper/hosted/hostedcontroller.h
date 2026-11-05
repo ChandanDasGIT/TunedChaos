@@ -62,6 +62,8 @@ class HostedController : public QObject
     // Letter groups per tab (Settings > Library on, the tab sorted by name; not Folders).
     // Songs and lists carry a "letter".
     Q_PROPERTY(QVariantList letterTabs READ letterTabs NOTIFY letterTabsChanged)
+    // letterStarts() of every tab, kept up to date (for the grids)
+    Q_PROPERTY(QVariantList allLetterStarts READ allLetterStarts NOTIFY listsChanged)
 
 public:
     enum Tab { SongsTab, AlbumsTab, ArtistsTab, GenresTab, PlaylistsTab, FoldersTab };
@@ -91,6 +93,13 @@ public:
     QVariantList letterTabs() const;
     // Where each letter starts in a tab's list: { "A": 0, "B": 12, ... }
     Q_INVOKABLE QVariantMap letterStarts(int tab) const;
+    QVariantList allLetterStarts() const
+    {
+        QVariantList out;
+        for (int tab = SongsTab; tab <= FoldersTab; ++tab)
+            out.append(letterStarts(tab));
+        return out;
+    }
     QVariantList playlists() const { return m_playlists; }
     bool detailOpen() const { return !m_detailTitle.isEmpty(); }
     QString detailTitle() const { return m_detailTitle; }

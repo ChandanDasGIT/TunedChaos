@@ -90,8 +90,9 @@ chmod +x TunedChaos-*.AppImage
 
 ### Library
 
-- Songs, Albums, Artists, Genres and Folders each have search and their own
-  sort (by name, date added, date modified, song count and more).
+- Songs, Albums, Folders, Artists and Genres each have search, their own
+  sort (by name, date added, date modified, song count and more) and their own
+  view: a list or a grid of tiles (the button beside Sort; Hosted too).
 
 - Songs, Albums, Artists and Folders, with live search, refreshed in the
   background (only new or changed files are read). Albums are grouped by

@@ -111,6 +111,8 @@ class SettingsController : public QObject
     Q_PROPERTY(QString librarySource READ librarySource WRITE setLibrarySource NOTIFY librarySourceChanged)
     // Hosted library: how each tab is sorted (songs, albums, artists, genres, playlists, folders)
     Q_PROPERTY(QStringList hostedSorts READ hostedSorts NOTIFY hostedSortsChanged)
+    // Library tabs shown as a grid of tiles: { "local.songs": true, ... } (see isGridView)
+    Q_PROPERTY(QVariantMap libraryViews READ libraryViews NOTIFY libraryViewsChanged)
     // Library lists sorted by name get letter headers (# A..Z), tap one to jump to a letter
     Q_PROPERTY(bool letterGroups READ letterGroups WRITE setLetterGroups NOTIFY letterGroupsChanged)
     // Albums: "name", "nameDesc", "newest", "oldest", "modifiedNew", "modifiedOld", "artist" or "mostSongs"
@@ -259,6 +261,10 @@ public:
     QString librarySource() const;
     void setLibrarySource(const QString &source);
     QStringList hostedSorts() const;
+    QVariantMap libraryViews() const;
+    // "local.songs", "local.albums", "hosted.artists"...: a grid (true) or a list
+    Q_INVOKABLE bool isGridView(const QString &key) const;
+    Q_INVOKABLE void setGridView(const QString &key, bool grid);
     Q_INVOKABLE void setHostedSort(int tab, const QString &sort);
     bool letterGroups() const;
     void setLetterGroups(bool enabled);
@@ -347,6 +353,7 @@ signals:
     void letterGroupsChanged();
     void librarySourceChanged();
     void hostedSortsChanged();
+    void libraryViewsChanged();
     void panelsChanged();
     void navDividersChanged();
     void startPanelChanged();

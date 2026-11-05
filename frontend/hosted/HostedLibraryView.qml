@@ -13,6 +13,13 @@ Item {
                                      HostedController.playlists, HostedController.folderEntries]
     readonly property bool letters: HostedController.letterTabs[tab] === true
     readonly property bool inFolders: tab === HostedController.FoldersTab
+    // The tabs in the order shown (their numbers stay: sorts and views are kept by them)
+    readonly property var tabOrder: [0, 1, 5, 2, 3, 4]
+    // Each tab as a list or a grid of tiles (Settings: library.view.hosted.<tab>)
+    readonly property var viewKeys: ["hosted.songs", "hosted.albums", "hosted.artists", "hosted.genres",
+                                     "hosted.playlists", "hosted.folders"]
+    readonly property bool grid: SettingsController.libraryViews[viewKeys[tab]] === true
+    readonly property var shownList: tabLists[tab]
     readonly property int folderSongCount: HostedController.folderEntries.filter(e => e.kind === "song").length
 
     // Back: out of an album / artist / playlist, or up one folder (false: nothing to go back from)
@@ -139,6 +146,16 @@ Item {
                 elide: Text.ElideRight
             }
 
+            // List or grid, for this tab
+            ControlButton {
+                iconName: root.grid ? "list" : "grid"
+                iconSize: 13
+                iconColor: Theme.textMuted
+                ToolTip.visible: hovered
+                ToolTip.text: root.grid ? qsTr("Show as a list") : qsTr("Show as a grid")
+                onClicked: SettingsController.setGridView(root.viewKeys[root.tab], !root.grid)
+            }
+
             ControlButton {
                 id: sortButton
                 iconName: "sortList"
@@ -172,16 +189,16 @@ Item {
             Layout.fillWidth: true
             Layout.margins: Theme.padding
             Layout.bottomMargin: 4
-            current: root.tab
+            current: root.tabOrder.indexOf(root.tab)
             tabs: [
                 { icon: "music", label: qsTr("Songs") },
                 { icon: "compactDisc", label: qsTr("Albums") },
+                { icon: "folder", label: qsTr("Folders") },
                 { icon: "user", label: qsTr("Artists") },
                 { icon: "music", label: qsTr("Genres") },
-                { icon: "listMusic", label: qsTr("Playlists") },
-                { icon: "folder", label: qsTr("Folders") }
+                { icon: "listMusic", label: qsTr("Playlists") }
             ]
-            onTabPicked: (index) => root.tab = index
+            onTabPicked: (index) => root.tab = root.tabOrder[index]
         }
 
         // Search: filters the tab's list as you type (not in Folders)
@@ -280,7 +297,7 @@ Item {
             Layout.fillHeight: true
             Layout.leftMargin: Theme.spacing
             Layout.rightMargin: Theme.spacing
-            visible: !HostedController.detailOpen
+            visible: !HostedController.detailOpen && !root.grid
             clip: true
             spacing: 2
             boundsBehavior: Flickable.StopAtBounds
@@ -340,7 +357,55 @@ Item {
                                                                                    : HostedController.SongsList,
                                                                     songIndex, !favorite)
                     onMenuRequested: (button) => songMenu.show(button, root.inFolders ? HostedController.FolderList
-                                                                                      : HostedController.SongsList, songIndex)
+                                                                                      : HostedController.SongsList, songIndex,
+                                                               favorite)
+                }
+            }
+        }
+
+        // The same as a grid of tiles
+        TileGrid {
+            id: tileGrid
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.leftMargin: Theme.spacing
+            Layout.rightMargin: Theme.spacing
+            visible: !HostedController.detailOpen && root.grid
+            itemCount: root.shownList.length
+            revision: root.shownList
+            letterStarts: root.letters ? HostedController.allLetterStarts[root.tab] : null
+            onLetterTapped: {
+                letterGrid.starts = HostedController.letterStarts(root.tab)
+                letterGrid.visible = true
+            }
+
+            tile: Component {
+                LibraryTile {
+                    required property var modelData
+                    readonly property var item: root.shownList[modelData] ?? ({})
+                    // A song: on the Songs tab, or in a folder (after its folders)
+                    readonly property bool song: root.tab === HostedController.SongsTab || item.kind === "song"
+                    readonly property int songIndex: root.inFolders ? modelData - (root.shownList.length - root.folderSongCount)
+                                                                    : modelData
+                    readonly property int songList: root.inFolders ? HostedController.FolderList : HostedController.SongsList
+
+                    image: item.thumbnail || ""
+                    icon: item.kind === "folder" ? "folder" : song ? "music"
+                        : root.tab === HostedController.ArtistsTab ? "user"
+                        : root.tab === HostedController.PlaylistsTab ? "listMusic" : "compactDisc"
+                    title: (song ? item.title : item.name) || ""
+                    subtitle: (song ? item.artist : item.subtitle) || ""
+                    current: song && item.path === PlayerController.source
+                    showMore: song
+                    onTapped: {
+                        if (item.kind === "folder")
+                            HostedController.openFolder(item.id, item.name)
+                        else if (song)
+                            HostedController.play(songList, songIndex)
+                        else
+                            HostedController.open(root.tab, item.id, item.name, item.thumbnail)
+                    }
+                    onMoreRequested: (button) => songMenu.show(button, songList, songIndex, item.favorite === true)
                 }
             }
         }
@@ -412,7 +477,7 @@ Item {
                     onQueueRequested: HostedController.addToQueue(HostedController.DetailList, index)
                     favorite: modelData.favorite === true
                     onFavoriteToggled: HostedController.setFavorite(HostedController.DetailList, index, !favorite)
-                    onMenuRequested: (button) => songMenu.show(button, HostedController.DetailList, index)
+                    onMenuRequested: (button) => songMenu.show(button, HostedController.DetailList, index, favorite)
                 }
             }
         }
@@ -424,7 +489,10 @@ Item {
         visible: false
         z: 50
         onChosen: (row) => {
-            list.positionViewAtIndex(row, ListView.Beginning)
+            if (root.grid)
+                tileGrid.positionViewAtIndex(tileGrid.rowOf(row), ListView.Beginning)
+            else
+                list.positionViewAtIndex(row, ListView.Beginning)
             visible = false
         }
         onClosed: visible = false
@@ -436,13 +504,33 @@ Item {
 
         property int list: 0
         property int index: -1
+        property bool favorite: false
         property var choices: []
+        readonly property int fixedCount: 5 // the items before the playlists
 
-        function show(button, list, index) {
+        // The server's playlists can arrive after the menu opened (loaded on first use)
+        Connections {
+            target: HostedController
+            function onListsChanged() { if (songMenu.visible) songMenu.choices = HostedController.playlistChoices() }
+        }
+
+        function show(button, list, index, favorite) {
             songMenu.list = list
             songMenu.index = index
+            songMenu.favorite = favorite === true
             choices = HostedController.playlistChoices()
             popup(button, 0, button.height)
+        }
+
+        Action {
+            text: songMenu.favorite ? qsTr("Remove from your favourites") : qsTr("Add to your favourites")
+            icon.name: "heart"
+            onTriggered: HostedController.setFavorite(songMenu.list, songMenu.index, !songMenu.favorite)
+        }
+        Action {
+            text: qsTr("Add to the Queue")
+            icon.name: "plus"
+            onTriggered: HostedController.addToQueue(songMenu.list, songMenu.index)
         }
 
         Action {
@@ -477,7 +565,7 @@ Item {
                 icon.name: "listMusic"
                 onTriggered: HostedController.addToPlaylist(songMenu.list, songMenu.index, modelData.id, modelData.name)
             }
-            onObjectAdded: (index, object) => songMenu.insertAction(index + 3, object)
+            onObjectAdded: (index, object) => songMenu.insertAction(index + songMenu.fixedCount, object)
             onObjectRemoved: (index, object) => songMenu.removeAction(object)
         }
     }

@@ -26,6 +26,8 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     int count() const { return int(m_tracks.size()); }
+    // One row's roles by name, for views that aren't item views (the grid): { path, title, artist, album, duration }
+    Q_INVOKABLE QVariantMap get(int row) const;
     const std::vector<Track> &tracks() const { return m_tracks; }
     void setTracks(std::vector<Track> tracks);
 

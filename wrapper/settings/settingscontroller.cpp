@@ -968,6 +968,32 @@ void SettingsController::setLibrarySource(const QString &source)
     emit librarySourceChanged();
 }
 
+bool SettingsController::isGridView(const QString &key) const
+{
+    // Albums were a grid before the choice existed
+    return m_settings->boolValue("library.view." + key.toStdString(), key == QLatin1String("local.albums"));
+}
+
+QVariantMap SettingsController::libraryViews() const
+{
+    QVariantMap out;
+    for (const char *library : {"local", "hosted"})
+        for (const char *tab : {"songs", "albums", "folders", "artists", "genres", "playlists"}) {
+            const QString key = QString::fromLatin1(library) + QLatin1Char('.') + QString::fromLatin1(tab);
+            out.insert(key, isGridView(key));
+        }
+    return out;
+}
+
+void SettingsController::setGridView(const QString &key, bool grid)
+{
+    if (isGridView(key) == grid)
+        return;
+    m_settings->setBool("library.view." + key.toStdString(), grid);
+    scheduleSave();
+    emit libraryViewsChanged();
+}
+
 QStringList SettingsController::hostedSorts() const
 {
     QStringList sorts;

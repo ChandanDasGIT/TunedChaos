@@ -7,6 +7,18 @@ int LibrarySongsModel::rowCount(const QModelIndex &parent) const
     return parent.isValid() ? 0 : int(m_tracks.size());
 }
 
+QVariantMap LibrarySongsModel::get(int row) const
+{
+    if (row < 0 || size_t(row) >= m_tracks.size())
+        return {};
+    const Track &track = m_tracks[size_t(row)];
+    return {{QStringLiteral("path"), QString::fromStdString(track.path)},
+            {QStringLiteral("title"), QString::fromStdString(track.title)},
+            {QStringLiteral("artist"), QString::fromStdString(track.artist)},
+            {QStringLiteral("album"), QString::fromStdString(track.album)},
+            {QStringLiteral("duration"), qint64(track.durationMs)}};
+}
+
 QVariant LibrarySongsModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid() || index.row() < 0 || size_t(index.row()) >= m_tracks.size())
