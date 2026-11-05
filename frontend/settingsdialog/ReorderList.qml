@@ -105,14 +105,23 @@ Item {
                 }
             }
 
-            Loader {
+            // The row's controls, made with their data already in place: a Loader would
+            // make them empty first, and a switch would show "off" for a moment.
+            Item {
                 id: content
+                property Item item: null
                 anchors.left: grip.right
                 anchors.leftMargin: row.fixed ? Theme.padding - grip.width : 0
                 anchors.right: parent.right
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                sourceComponent: root.rowContent
+                Component.onCompleted: {
+                    if (!root.rowContent)
+                        return
+                    item = root.rowContent.createObject(content, { modelData: row.modelData, index: row.index,
+                                                                   width: Qt.binding(() => content.width),
+                                                                   height: Qt.binding(() => content.height) })
+                }
             }
 
             Binding { target: content.item; property: "modelData"; value: row.modelData; when: content.item !== null }

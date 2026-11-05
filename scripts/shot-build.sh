@@ -436,6 +436,11 @@ hook = '''    // ---- screenshot harness
                         QTest::qWait(30);
                     }
                     QTest::mouseRelease(w, Qt::LeftButton, {}, b);
+                    if (qEnvironmentVariableIsSet("SHOT_DRAG_FRAMES")) // frames just after letting go: build/shot/drag_<ms>.png
+                        for (int ms : {40, 120, 400}) {
+                            QTest::qWait(ms == 40 ? 40 : ms == 120 ? 80 : 280);
+                            w->grabWindow().save(QStringLiteral("build/shot/drag_%1.png").arg(ms));
+                        }
                 } else if (step.startsWith(QLatin1String("tap:"))) { // tap:x,y — a plain left click
                     auto *w = qobject_cast<QQuickWindow *>(root);
                     const QPoint p(step.mid(4).section(QLatin1Char(','), 0, 0).toInt(), step.mid(4).section(QLatin1Char(','), 1, 1).toInt());
