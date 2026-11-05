@@ -438,12 +438,23 @@ ApplicationWindow {
         Qt.quit()
     }
 
+    // Closing the window: to the tray (desktop, when there is one), else, with
+    // "Keep playing" on, hidden while a song is loaded; otherwise the app quits.
+    readonly property bool trayOn: !Theme.touchOnly && typeof Tray !== "undefined" && Tray.available
+                                   && SettingsController.closeToTray
     onClosing: (close) => {
-        if (!quitting && SettingsController.backgroundPlayback && PlayerController.hasTrack) {
+        if (quitting)
+            return
+        if (trayOn || (SettingsController.backgroundPlayback && PlayerController.hasTrack)) {
             close.accepted = false
             window.hide()
         }
     }
+    function hideToTray() {
+        if (trayOn)
+            window.hide()
+    }
+    onVisibleChanged: if (typeof Tray !== "undefined") Tray.windowShown = visible
 
     // The Now Playing buttons and the keyboard shortcuts (Ctrl+1 / 2 / 3) share these.
     // Phone size shows one panel at a time: opening one closes the others.

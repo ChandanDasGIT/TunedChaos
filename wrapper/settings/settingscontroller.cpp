@@ -30,6 +30,7 @@ constexpr const char *RepeatModeKey = "repeat";
 constexpr const char *VolumeStepKey = "volume.step";
 constexpr const char *RestorePlaylistKey = "playlist.restoreOnStartup";
 constexpr const char *BackgroundPlaybackKey = "playback.background";
+constexpr const char *CloseToTrayKey = "window.closeToTray";
 constexpr const char *HistoryEnabledKey = "history.enabled";
 constexpr const char *ReplayGainKey = "playback.replayGain";
 constexpr const char *NotificationsKey = "general.notifications";
@@ -294,6 +295,20 @@ void SettingsController::setRestorePlaylist(bool restore)
     m_settings->setBool(RestorePlaylistKey, restore);
     scheduleSave();
     emit restorePlaylistChanged();
+}
+
+bool SettingsController::closeToTray() const
+{
+    return m_settings->boolValue(CloseToTrayKey, true);
+}
+
+void SettingsController::setCloseToTray(bool enabled)
+{
+    if (enabled == closeToTray())
+        return;
+    m_settings->setBool(CloseToTrayKey, enabled);
+    scheduleSave();
+    emit closeToTrayChanged();
 }
 
 bool SettingsController::backgroundPlayback() const

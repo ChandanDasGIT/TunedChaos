@@ -343,7 +343,23 @@ Rectangle {
                             SettingsRow {
                                 Layout.fillWidth: true
                                 readonly property bool hiddenHere: root.android
-                                visible: !hiddenHere // (Android keeps playing by itself)
+                                visible: !hiddenHere // (desktop only)
+                                title: qsTr("Close to the tray")
+                                description: typeof Tray !== "undefined" && Tray.available
+                                    ? qsTr("Closing the window (or Ctrl+C in a terminal) keeps the app in the tray, playing. Click the tray icon to bring it back; quit from its menu or with Ctrl+Q.")
+                                    : qsTr("No tray was found on this desktop, so closing the window follows the setting below.")
+
+                                SettingsSwitch {
+                                    checked: SettingsController.closeToTray
+                                    onToggled: SettingsController.closeToTray = checked
+                                }
+                            }
+
+                            SettingsRow {
+                                Layout.fillWidth: true
+                                readonly property bool hiddenHere: root.android
+                                         || (typeof Tray !== "undefined" && Tray.available && SettingsController.closeToTray)
+                                visible: !hiddenHere // (Android keeps playing by itself; with the tray it goes there)
                                 title: qsTr("Keep playing after closing the window")
                                 description: qsTr("Closing hides the window; open the app again to bring it back. Quit with the power button or Ctrl+Q.")
 

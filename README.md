@@ -162,6 +162,13 @@ chmod +x TunedChaos-*.AppImage
 
 - MPRIS (media keys, desktop media controls, `playerctl`) and one running copy
   at a time.
+- **Tray icon** (Linux and Windows): closing the window, or Ctrl+C in a
+  terminal, keeps the app in the tray, still playing. Click the icon to show or
+  hide the window; its menu has play / pause, next, previous and Quit. It can be
+  turned off in Settings → General.
+- **Panel sides**: in Settings → Layout Customisation, choose for each panel
+  whether it opens left or right of the player, and drag the bottom bar's
+  panels into the order you like.
 
 ## Keyboard shortcuts
 

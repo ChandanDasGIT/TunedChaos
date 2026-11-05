@@ -35,6 +35,7 @@ class SettingsController : public QObject
     // Playback
     Q_PROPERTY(bool restorePlaylist READ restorePlaylist WRITE setRestorePlaylist NOTIFY restorePlaylistChanged)
     Q_PROPERTY(bool backgroundPlayback READ backgroundPlayback WRITE setBackgroundPlayback NOTIFY backgroundPlaybackChanged)
+    Q_PROPERTY(bool closeToTray READ closeToTray WRITE setCloseToTray NOTIFY closeToTrayChanged)
     // The private listening history (kept on this computer only)
     Q_PROPERTY(bool historyEnabled READ historyEnabled WRITE setHistoryEnabled NOTIFY historyChanged)
     // ReplayGain: 0 off, 1 track, 2 album
@@ -160,6 +161,8 @@ public:
     bool restorePlaylist() const;    // load the last playlist on startup
     void setRestorePlaylist(bool restore);
     bool backgroundPlayback() const; // closing the window keeps the music playing
+    bool closeToTray() const;        // closing the window (or Ctrl+C) puts the app in the tray
+    void setCloseToTray(bool enabled);
     bool notificationsEnabled() const;
     void setNotificationsEnabled(bool enabled);
     int replayGain() const;
@@ -309,6 +312,7 @@ signals:
     void volumeStepChanged();
     void restorePlaylistChanged();
     void backgroundPlaybackChanged();
+    void closeToTrayChanged();
     void historyChanged();
     void replayGainChanged();
     void notificationsEnabledChanged();

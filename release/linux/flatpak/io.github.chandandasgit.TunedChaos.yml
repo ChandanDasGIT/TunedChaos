@@ -24,6 +24,7 @@ finish-args:
   - --filesystem=/mnt
   - --own-name=org.mpris.MediaPlayer2.tunedchaos  # media controls
   - --talk-name=org.freedesktop.Notifications             # song-change notifications
+  - --talk-name=org.kde.StatusNotifierWatcher             # the tray icon
 
 modules:
   - name: taglib

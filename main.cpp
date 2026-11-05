@@ -21,11 +21,18 @@
 #include "wrapper/smartplaylists/smartplaylistscontroller.h"
 #include "wrapper/visualizer/visualizercontroller.h"
 #include "wrapper/singleinstance/singleinstance.h"
+#include "wrapper/tray/trayicon.h"
+#if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
+#include "wrapper/tray/terminalsignals.h"
+#endif
 #include "wrapper/youtube/ytmetadatacontroller.h"
 #include "wrapper/youtube/youtubecontroller.h"
 
 #include <QFontDatabase>
 #include <QGuiApplication>
+#ifdef CMP_TRAY
+#include <QApplication> // (the tray icon's menu is a widget)
+#endif
 #include <QIcon>
 #include <QNetworkInformation>
 #include <QProcess>
@@ -83,7 +90,11 @@ int main(int argc, char *argv[])
     if (scaleFromSettings && !qFuzzyCompare(interfaceScale, 1.0))
         qputenv("QT_SCALE_FACTOR", QByteArray::number(interfaceScale));
 
+#ifdef CMP_TRAY
+    QApplication app(argc, argv);
+#else
     QGuiApplication app(argc, argv);
+#endif
 #ifdef Q_OS_ANDROID
     QGuiApplication::styleHints()->setStartDragDistance(8); // Android's own: sooner, and taps still land
 #endif
@@ -228,9 +239,14 @@ int main(int argc, char *argv[])
     // New versions of the app (Settings > About > Check for updates)
     AppUpdater appUpdater(&settings, nullptr); // (before the engine, which must go first)
 
+    // The tray icon (desktop): closing the window hides it there (see Main.qml onClosing).
+    // (Before the engine, so it outlives the QML that reads it.)
+    TrayIcon tray(&player, &playlist, nullptr);
+
     QQmlApplicationEngine engine;
     engine.addImageProvider(QStringLiteral("albumart"), new AlbumArtProvider); // engine takes ownership
     engine.rootContext()->setContextProperty(QStringLiteral("AppUpdater"), &appUpdater);
+    engine.rootContext()->setContextProperty(QStringLiteral("Tray"), &tray);
     // Windows: the update installs once the app has closed, then starts it again
     QObject::connect(&appUpdater, &AppUpdater::quitRequested, &app, [&engine] {
         if (!engine.rootObjects().isEmpty())
@@ -281,6 +297,29 @@ int main(int argc, char *argv[])
         else
             QCoreApplication::quit();
     });
+
+    // The tray: show / hide the window, quit for real
+    const auto rootCall = [&engine](const char *method) {
+        if (!engine.rootObjects().isEmpty())
+            QMetaObject::invokeMethod(engine.rootObjects().constFirst(), method);
+        else
+            QCoreApplication::quit();
+    };
+    QObject::connect(&tray, &TrayIcon::showRequested, &app, raiseWindow);
+    QObject::connect(&tray, &TrayIcon::hideRequested, &app, [rootCall] { rootCall("hideToTray"); });
+    QObject::connect(&tray, &TrayIcon::quitRequested, &app, [rootCall] { rootCall("quitApp"); });
+#if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
+    // Ctrl+C in the terminal: to the tray (if there is one and that's chosen), else quit;
+    // logout / kill / the terminal closed: quit properly.
+    TerminalSignals terminalSignals(nullptr);
+    QObject::connect(&terminalSignals, &TerminalSignals::interrupted, &app, [&, rootCall] {
+        if (tray.available() && settings.closeToTray())
+            rootCall("hideToTray");
+        else
+            rootCall("quitApp");
+    });
+    QObject::connect(&terminalSignals, &TerminalSignals::terminated, &app, [rootCall] { rootCall("quitApp"); });
+#endif
 
     // Restart (Settings > Appearance > Interface size): quit as usual, then start again.
     bool restart = false;

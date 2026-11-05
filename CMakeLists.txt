@@ -37,6 +37,9 @@ set(CMP_QT_COMPONENTS Quick QuickControls2 Network)
 if(CMP_PLATFORM STREQUAL "linux")
     list(APPEND CMP_QT_COMPONENTS DBus) # media controls (MPRIS), notifications
 endif()
+if(CMP_PLATFORM STREQUAL "linux" OR CMP_PLATFORM STREQUAL "windows")
+    list(APPEND CMP_QT_COMPONENTS Widgets) # the tray icon and its menu
+endif()
 find_package(Qt6 6.10 REQUIRED COMPONENTS ${CMP_QT_COMPONENTS})
 qt_standard_project_setup(REQUIRES 6.10) # the oldest Qt built and tested (CI)
 
@@ -202,6 +205,8 @@ qt_add_executable(TunedChaos
     wrapper/opener/fileopener.h
     wrapper/update/appupdater.cpp
     wrapper/update/appupdater.h
+    wrapper/tray/trayicon.cpp
+    wrapper/tray/trayicon.h
 )
 
 # The platform's parts (see CMP_PLATFORM above)
@@ -212,6 +217,8 @@ if(CMP_PLATFORM STREQUAL "linux")
         wrapper/notifications/notificationcontroller_linux.cpp
         wrapper/systemmedia/systemmedia_linux.cpp
         wrapper/update/appupdater_linux.cpp
+        wrapper/tray/terminalsignals.cpp
+        wrapper/tray/terminalsignals.h
     )
 elseif(CMP_PLATFORM STREQUAL "windows")
     target_sources(TunedChaos PRIVATE
@@ -432,12 +439,16 @@ target_compile_definitions(TunedChaos PRIVATE CMP_YTDLP_SELF_UPDATE=$<BOOL:${CMP
 
 # Shown in Settings > About (QCoreApplication::applicationVersion).
 target_compile_definitions(TunedChaos PRIVATE APP_VERSION="${PROJECT_VERSION}")
+if(CMP_PLATFORM STREQUAL "linux" OR CMP_PLATFORM STREQUAL "windows")
+    target_compile_definitions(TunedChaos PRIVATE CMP_TRAY)
+endif()
 
 target_link_libraries(TunedChaos PRIVATE
     backend
     Qt6::Quick
     Qt6::QuickControls2
     $<$<STREQUAL:${CMP_PLATFORM},linux>:Qt6::DBus>
+    $<$<OR:$<STREQUAL:${CMP_PLATFORM},linux>,$<STREQUAL:${CMP_PLATFORM},windows>>:Qt6::Widgets>
     Qt6::Network
     chaoticstyleplugin
 )
