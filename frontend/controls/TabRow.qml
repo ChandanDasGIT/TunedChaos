@@ -3,6 +3,8 @@ import QtQuick.Controls
 
 // A panel's tabs on one line: they share its width evenly and scroll sideways
 // where they don't fit, with an arrow on each side that has more to show.
+// Phones: compact tabs sized to their labels; instead of arrows (which covered
+// a tab), tabs fade out toward an edge with more beyond it.
 Item {
     id: root
 
@@ -12,6 +14,9 @@ Item {
     readonly property bool busy: hover.hovered || list.dragging || list.moving
 
     signal tabPicked(int index)
+
+    readonly property bool compact: Theme.touchOnly
+    readonly property real fadeWidth: 28
 
     implicitHeight: 34
 
@@ -34,12 +39,23 @@ Item {
         }
 
         delegate: PillButton {
+            id: tab
+
             required property var modelData
             required property int index
+            // Phones: how close it is to an edge with more beyond it (fades there)
+            readonly property real fromLeft: x - list.contentX
+            readonly property real fromRight: list.width - (x - list.contentX + width)
+            readonly property real edgeFade: !root.compact ? 1
+                : Math.min(list.atXBeginning ? 1 : Math.max(0.15, Math.min(1, (fromLeft + root.fadeWidth) / (2 * root.fadeWidth))),
+                           list.atXEnd ? 1 : Math.max(0.15, Math.min(1, (fromRight + root.fadeWidth) / (2 * root.fadeWidth))))
 
-            width: Math.max(implicitWidth, (list.width - (list.count - 1) * list.spacing) / list.count)
+            width: root.compact ? implicitWidth
+                 : Math.max(implicitWidth, (list.width - (list.count - 1) * list.spacing) / list.count)
+            opacity: edgeFade
+            sidePadding: root.compact ? 12 : 16
             iconName: modelData.icon
-            iconSize: 11
+            iconSize: root.compact ? 10 : 11
             text: modelData.label
             implicitHeight: 34
             active: root.current === index
@@ -50,14 +66,14 @@ Item {
     ScrollHint {
         anchors.left: parent.left
         iconName: "chevronLeftSmall"
-        shown: !list.atXBeginning
+        shown: !root.compact && !list.atXBeginning
         onClicked: list.positionViewAtBeginning()
     }
 
     ScrollHint {
         anchors.right: parent.right
         iconName: "chevronRight"
-        shown: !list.atXEnd
+        shown: !root.compact && !list.atXEnd
         onClicked: list.positionViewAtEnd()
     }
 

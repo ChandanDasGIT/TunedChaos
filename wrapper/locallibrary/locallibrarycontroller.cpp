@@ -733,16 +733,20 @@ void LocalLibraryController::rebuildFolder()
             const std::string prefix = (clean + QLatin1Char('/')).toStdString();
             int count = 0;
             int64_t modifiedAt = 0;
+            std::string cover; // the first song (by path) with a cover
             for (const Track &t : m_tracks) {
                 if (t.path.compare(0, prefix.size(), prefix) == 0) {
                     ++count;
                     modifiedAt = std::max(modifiedAt, t.modifiedAt);
+                    if (t.hasCover && (cover.empty() || t.path < cover))
+                        cover = t.path;
                 }
             }
             m_subfolders.append(QVariantMap{{QStringLiteral("name"), QFileInfo(clean).fileName()},
                                             {QStringLiteral("path"), clean},
                                             {QStringLiteral("count"), count},
                                             {QStringLiteral("modifiedAt"), qint64(modifiedAt)},
+                                            {QStringLiteral("coverPath"), QString::fromStdString(cover)},
                                             {QStringLiteral("location"), QFileInfo(clean).path()}});
         }
         arrangeFolders();
@@ -754,6 +758,7 @@ void LocalLibraryController::rebuildFolder()
     const std::string prefix = (m_folder + QLatin1Char('/')).toStdString();
     std::map<QString, int> counts; // subfolder name -> songs in it
     std::map<QString, int64_t> modified; // subfolder name -> its newest song's
+    std::map<QString, std::string> covers; // subfolder name -> its first song (by path) with a cover
     for (const Track &t : m_tracks) {
         if (t.path.compare(0, prefix.size(), prefix) != 0)
             continue;
@@ -762,6 +767,8 @@ void LocalLibraryController::rebuildFolder()
             const QString name = QString::fromStdString(t.path.substr(prefix.size(), slash - prefix.size()));
             ++counts[name];
             modified[name] = std::max(modified[name], t.modifiedAt);
+            if (t.hasCover && (covers[name].empty() || t.path < covers[name]))
+                covers[name] = t.path;
         }
     }
     QStringList names;
@@ -772,6 +779,7 @@ void LocalLibraryController::rebuildFolder()
         m_subfolders.append(QVariantMap{{QStringLiteral("name"), name},
                                         {QStringLiteral("path"), m_folder + QLatin1Char('/') + name},
                                         {QStringLiteral("count"), counts[name]},
+                                        {QStringLiteral("coverPath"), QString::fromStdString(covers[name])},
                                         {QStringLiteral("modifiedAt"), qint64(modified[name])}});
     arrangeFolders();
 

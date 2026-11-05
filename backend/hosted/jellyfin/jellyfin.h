@@ -18,6 +18,7 @@ public:
     std::optional<std::vector<HostedSong>> songsOf(Kind kind, const std::string &id) override;
     std::optional<FolderContents> folder(const std::string &id, Sort sort) override;
     std::optional<std::vector<HostedSong>> favorites(Sort sort) override;
+    std::string folderCoverId(const std::string &folderId) override;
     bool setFavorite(const std::string &songId, bool favorite) override;
     std::string createPlaylist(const std::string &name, const std::vector<std::string> &songIds) override;
     bool addToPlaylist(const std::string &playlistId, const std::vector<std::string> &songIds) override;

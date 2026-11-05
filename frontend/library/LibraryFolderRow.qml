@@ -12,6 +12,7 @@ Rectangle {
     required property string path
     required property int count
     property string location: "" // shown under the name (the music folders)
+    property string coverPath: "" // a song in it with a cover: shown instead of the folder icon
 
     signal opened()
 
@@ -48,12 +49,23 @@ Rectangle {
             Layout.preferredHeight: 40
             radius: Theme.radius
             color: Theme.accentSoft
+            clip: true
 
             Icon {
                 anchors.centerIn: parent
                 name: "folder"
                 size: 15
                 color: Theme.accent
+            }
+
+            Image {
+                anchors.fill: parent
+                visible: root.coverPath !== ""
+                source: root.coverPath !== "" ? Util.coverSource(root.coverPath, "") : ""
+                sourceSize: Qt.size(80, 80)
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                opacity: status === Image.Ready ? 1 : 0
             }
         }
 

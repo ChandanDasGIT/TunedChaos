@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QHash>
 #include <QSet>
 #include <QString>
 #include <QTimer>
@@ -8,6 +9,7 @@
 #include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -168,6 +170,10 @@ private:
     QTimer m_reportTimer;
     QThreadPool m_reportPool;
     QSet<QString> m_favorites; // paths of favourite songs
+    // Folder pictures found from what's in them (folder id -> picture URL, "" = none)
+    QHash<QString, QString> m_folderCovers;
+    QThreadPool m_coverPool; // finding them, without making the panel "busy"
+    void findFolderCovers(int request);
     int m_detailKind = -1;     // the opened one's tab, and its id
     QString m_detailId;
     std::vector<std::string> m_detailEntryIds; // playlist entries, as detailSongs
@@ -187,7 +193,7 @@ private:
     bool m_loaded[6] = {};
     std::vector<::Track> m_songTracks, m_detailTracks, m_folderTracks;
     QVariantList m_folderCrumbs, m_folderEntries;
-    int m_folderRequest = 0; // the folder asked for last (older answers are dropped)
+    std::atomic<int> m_folderRequest{0}; // the folder asked for last (older answers are dropped; read by findFolderCovers)
     QVariantList m_songs, m_albums, m_artists, m_genres, m_playlists, m_detailSongs;
     QVariantList &listOf(int tab); // a tab's list of albums / artists / genres / playlists (shown)
     QVariantList &fullListOf(int tab); // the same, before the search

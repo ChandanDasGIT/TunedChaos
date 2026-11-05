@@ -124,67 +124,6 @@ Item {
         visible: HostedController.signedIn
         spacing: 0
 
-        // Which server, and signing out
-        RowLayout {
-            Layout.fillWidth: true
-            Layout.leftMargin: Theme.padding
-            Layout.rightMargin: Theme.padding
-            Layout.topMargin: Theme.spacing
-            spacing: Theme.spacing
-
-            Icon {
-                name: "cloud"
-                size: 12
-                color: Theme.accent
-            }
-
-            Label {
-                Layout.fillWidth: true
-                text: HostedController.serverName + "  ·  " + HostedController.userName
-                color: Theme.textMuted
-                font.pixelSize: Theme.fontSizeSmall
-                elide: Text.ElideRight
-            }
-
-            // List or grid, for this tab
-            ControlButton {
-                iconName: root.grid ? "list" : "grid"
-                iconSize: 13
-                iconColor: Theme.textMuted
-                ToolTip.visible: hovered
-                ToolTip.text: root.grid ? qsTr("Show as a list") : qsTr("Show as a grid")
-                onClicked: SettingsController.setGridView(root.viewKeys[root.tab], !root.grid)
-            }
-
-            ControlButton {
-                id: sortButton
-                iconName: "sortList"
-                iconSize: 13
-                readonly property string sort: SettingsController.hostedSorts[root.tab]
-                active: sort !== "name"
-                iconColor: active ? Theme.accent : Theme.textMuted
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Sort")
-                onClicked: sortMenu.popup(sortButton, 0, sortButton.height)
-            }
-
-            ControlButton {
-                iconName: "refresh"
-                iconSize: 12
-                iconColor: HostedController.busy ? Theme.accent : Theme.textMuted
-                enabled: !HostedController.busy
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Load again from the server")
-                onClicked: HostedController.refresh(root.tab)
-            }
-
-            PillButton {
-                text: qsTr("Sign out")
-                implicitHeight: 28
-                onClicked: HostedController.signOut()
-            }
-        }
-
         TabRow {
             Layout.fillWidth: true
             Layout.margins: Theme.padding
@@ -201,25 +140,120 @@ Item {
             onTabPicked: (index) => root.tab = root.tabOrder[index]
         }
 
-        // Search: filters the tab's list as you type (not in Folders)
-        FormField {
+        // Search (in Folders: where it is), then list / grid and sort
+        RowLayout {
+            Layout.fillWidth: true
             Layout.leftMargin: Theme.padding
             Layout.rightMargin: Theme.padding
             Layout.bottomMargin: Theme.spacing
-            visible: !root.inFolders && !HostedController.detailOpen
-            placeholderText: qsTr("Search your server")
-            text: HostedController.search
-            leftPadding: 36
-            inputMethodHints: Qt.ImhNoPredictiveText
-            onTextEdited: HostedController.search = text
+            visible: !HostedController.detailOpen
+            spacing: Theme.spacing
 
-            Icon {
-                anchors.left: parent.left
-                anchors.leftMargin: 14
-                anchors.verticalCenter: parent.verticalCenter
-                name: "search"
-                size: 12
-                color: Theme.textMuted
+            FormField {
+                visible: !root.inFolders
+                pill: true
+                placeholderText: qsTr("Search your server")
+                text: HostedController.search
+                leftPadding: 40
+                inputMethodHints: Qt.ImhNoPredictiveText
+                onTextEdited: HostedController.search = text
+
+                Icon {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 15
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: "search"
+                    size: 12
+                    color: Theme.textMuted
+                }
+            }
+
+            // Folders: up one, the path (a part opens that folder), play everything under it
+            PillButton {
+                visible: root.inFolders
+                iconName: "back"
+                iconSize: 12
+                implicitWidth: 36
+                implicitHeight: 36
+                enabled: HostedController.folderCrumbs.length > 0
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Up one folder")
+                onClicked: HostedController.folderUp()
+            }
+
+            ListView {
+                id: crumbs
+                visible: root.inFolders
+                Layout.fillWidth: true
+                Layout.preferredHeight: 36
+                orientation: ListView.Horizontal
+                clip: true
+                spacing: 0
+                boundsBehavior: Flickable.StopAtBounds
+                model: [{ id: "", name: qsTr("Libraries") }].concat(HostedController.folderCrumbs)
+                // The deepest part stays in view
+                onCountChanged: Qt.callLater(positionViewAtEnd)
+                onWidthChanged: Qt.callLater(positionViewAtEnd)
+
+                delegate: Row {
+                    id: crumb
+                    required property var modelData
+                    required property int index
+                    height: crumbs.height
+
+                    Icon {
+                        visible: crumb.index > 0
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: "chevronRight"
+                        size: 9
+                        color: Theme.textDim
+                    }
+
+                    PillButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        implicitHeight: 30
+                        sidePadding: 10
+                        transparentIdle: true
+                        iconName: crumb.index === 0 ? "home" : ""
+                        iconSize: 11
+                        active: crumb.index === crumbs.count - 1
+                        text: crumb.modelData.name
+                        onClicked: if (!active) HostedController.openCrumb(crumb.index - 1)
+                    }
+                }
+            }
+
+            PillButton {
+                visible: root.inFolders && HostedController.folderCrumbs.length > 0
+                filled: true
+                iconName: "play"
+                iconSize: 11
+                implicitWidth: 36
+                implicitHeight: 36
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Play all (subfolders too)")
+                onClicked: HostedController.playFolder()
+            }
+
+            ControlButton {
+                iconName: root.grid ? "list" : "grid"
+                iconSize: 14
+                iconColor: Theme.textMuted
+                ToolTip.visible: hovered
+                ToolTip.text: root.grid ? qsTr("Show as a list") : qsTr("Show as a grid")
+                onClicked: SettingsController.setGridView(root.viewKeys[root.tab], !root.grid)
+            }
+
+            ControlButton {
+                id: sortButton
+                iconName: "sortList"
+                iconSize: 14
+                readonly property string sort: SettingsController.hostedSorts[root.tab]
+                active: sort !== "name"
+                iconColor: active ? Theme.accent : Theme.textMuted
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Sort")
+                onClicked: sortMenu.popup(sortButton, 0, sortButton.height)
             }
         }
 
@@ -227,77 +261,50 @@ Item {
             Layout.fillWidth: true
             Layout.leftMargin: Theme.padding
             Layout.rightMargin: Theme.padding
-            visible: text !== ""
-            text: HostedController.error !== "" ? HostedController.error
-                : HostedController.busy ? qsTr("Loading…") : ""
-            color: HostedController.error !== "" ? Theme.error : Theme.textMuted
+            Layout.bottomMargin: Theme.spacing
+            visible: HostedController.error !== ""
+            text: HostedController.error
+            color: Theme.error
             font.pixelSize: Theme.fontSizeSmall
             wrapMode: Text.WordWrap
         }
 
-        // Folders: where it is (tap a part to go back there) and "play everything under it"
-        RowLayout {
+        // The tab's list or grid ("Loading…" floats over it: nothing moves)
+        Item {
             Layout.fillWidth: true
-            Layout.leftMargin: Theme.padding
-            Layout.rightMargin: Theme.padding
-            Layout.bottomMargin: 4
-            visible: root.inFolders
-            spacing: Theme.spacing
+            Layout.fillHeight: true
+            visible: !HostedController.detailOpen
 
-            ListView {
-                id: crumbs
-                Layout.fillWidth: true
-                Layout.preferredHeight: 30
-                orientation: ListView.Horizontal
-                clip: true
-                spacing: 2
-                model: [{ id: "", name: qsTr("Libraries") }].concat(HostedController.folderCrumbs)
-                onCountChanged: positionViewAtEnd()
+            Rectangle {
+                z: 10
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: parent.top
+                anchors.topMargin: 6
+                width: loadingLabel.implicitWidth + 28
+                height: 30
+                radius: 15
+                color: Theme.surfaceAlt
+                border.color: Theme.border
+                opacity: HostedController.busy ? 1 : 0
+                visible: opacity > 0
+                Behavior on opacity { NumberAnimation { duration: Theme.anim } }
 
-                delegate: Row {
-                    required property var modelData
-                    required property int index
-                    height: crumbs.height
-                    spacing: 2
-
-                    Icon {
-                        visible: index > 0
-                        anchors.verticalCenter: parent.verticalCenter
-                        name: "chevronRight"
-                        size: 8
-                        color: Theme.textDim
-                    }
-
-                    PillButton {
-                        anchors.verticalCenter: parent.verticalCenter
-                        implicitHeight: 28
-                        transparentIdle: true
-                        active: index === crumbs.count - 1
-                        text: modelData.name
-                        onClicked: HostedController.openCrumb(index - 1)
-                    }
+                Label {
+                    id: loadingLabel
+                    anchors.centerIn: parent
+                    text: qsTr("Loading…")
+                    color: Theme.textMuted
+                    font.pixelSize: Theme.fontSizeSmall
                 }
             }
-
-            PillButton {
-                visible: HostedController.folderCrumbs.length > 0
-                filled: true
-                iconName: "play"
-                iconSize: 11
-                text: qsTr("Play")
-                implicitHeight: 30
-                onClicked: HostedController.playFolder()
-            }
-        }
 
         // Songs, the list of albums / artists / playlists, or a folder's folders and songs
         ListView {
             id: list
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            Layout.leftMargin: Theme.spacing
-            Layout.rightMargin: Theme.spacing
-            visible: !HostedController.detailOpen && !root.grid
+            anchors.fill: parent
+            anchors.leftMargin: Theme.spacing
+            anchors.rightMargin: Theme.spacing
+            visible: !root.grid
             clip: true
             spacing: 2
             boundsBehavior: Flickable.StopAtBounds
@@ -366,11 +373,10 @@ Item {
         // The same as a grid of tiles
         TileGrid {
             id: tileGrid
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            Layout.leftMargin: Theme.spacing
-            Layout.rightMargin: Theme.spacing
-            visible: !HostedController.detailOpen && root.grid
+            anchors.fill: parent
+            anchors.leftMargin: Theme.spacing
+            anchors.rightMargin: Theme.spacing
+            visible: root.grid
             itemCount: root.shownList.length
             revision: root.shownList
             letterStarts: root.letters ? HostedController.allLetterStarts[root.tab] : null
@@ -408,6 +414,8 @@ Item {
                     onMoreRequested: (button) => songMenu.show(button, songList, songIndex, item.favorite === true)
                 }
             }
+        }
+
         }
 
         // An opened album / artist / playlist
@@ -610,16 +618,20 @@ Item {
     }
 
     component FormField: TextField {
+        id: field
+        // Search (pill-shaped, as in the local library) or a sign-in field
+        property bool pill: false
         Layout.fillWidth: true
-        implicitHeight: 42
+        implicitHeight: pill ? 40 : 42
         color: Theme.text
         placeholderTextColor: Theme.textMuted
         font.pixelSize: Theme.fontSize
         leftPadding: Theme.padding
         background: Rectangle {
-            radius: Theme.radius
-            color: Theme.fillSoft
-            border.color: parent.activeFocus ? Theme.accent : Theme.border
+            radius: field.pill ? height / 2 : Theme.radius
+            color: field.pill ? (field.activeFocus ? Theme.fillStrong : Theme.fill) : Theme.fillSoft
+            border.width: field.pill && !field.activeFocus ? 0 : 1
+            border.color: field.activeFocus ? Theme.accent : Theme.border
         }
     }
 }

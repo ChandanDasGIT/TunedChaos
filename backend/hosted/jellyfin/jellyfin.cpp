@@ -381,6 +381,25 @@ bool JellyfinServer::remove(const std::string &pathAndQuery)
     return true;
 }
 
+std::string JellyfinServer::folderCoverId(const std::string &folderId)
+{
+    // The first album under it with a cover, else the first song with its own picture
+    const std::string base = "/Users/" + HttpClient::urlEncode(m_account.userId) + "/Items?ParentId="
+                             + HttpClient::urlEncode(folderId)
+                             + "&Recursive=true&ImageTypes=Primary&Limit=1&SortBy=SortName&EnableTotalRecordCount=false"
+                               "&EnableUserData=false&IncludeItemTypes=";
+    for (const char *type : {"MusicAlbum", "Audio"}) {
+        const std::optional<std::string> body = get(base + type);
+        if (!body)
+            return {};
+        const json answer = json::parse(*body, nullptr, false);
+        const json *items = answer.is_discarded() ? nullptr : itemsOf(answer);
+        if (items && !items->empty() && items->front().is_object())
+            return text(items->front(), "Id");
+    }
+    return {};
+}
+
 std::optional<std::vector<HostedSong>> JellyfinServer::favorites(Sort sort)
 {
     return songList("/Users/" + HttpClient::urlEncode(m_account.userId)

@@ -92,8 +92,17 @@ Rectangle {
             font.pixelSize: Theme.fontSizeSmall
         }
 
+        // Phones: room for the title. Favourite and Queue are in the menu; a small
+        // heart only marks favourites.
+        Icon {
+            visible: root.isSong && Theme.touchOnly && root.favorite
+            name: "heart"
+            size: 11
+            color: Theme.accent
+        }
+
         ControlButton {
-            visible: root.isSong
+            visible: root.isSong && !Theme.touchOnly
             iconName: "heart"
             iconSize: 13
             iconColor: root.favorite ? Theme.accent : Theme.textDim
@@ -103,7 +112,7 @@ Rectangle {
         }
 
         ControlButton {
-            visible: root.isSong
+            visible: root.isSong && !Theme.touchOnly
             iconName: "plus"
             iconSize: 13
             iconColor: Theme.textMuted

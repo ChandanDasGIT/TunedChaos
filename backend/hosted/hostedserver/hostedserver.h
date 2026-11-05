@@ -101,6 +101,10 @@ public:
     };
     virtual std::optional<FolderContents> folder(const std::string &id, Sort sort) = 0;
 
+    // A picture for a folder without its own: the item (an album or a song under
+    // it, the first with a cover) whose picture to show; "" if none (or on failure)
+    virtual std::string folderCoverId(const std::string &folderId) = 0;
+
     // The user's favourite songs
     virtual std::optional<std::vector<HostedSong>> favorites(Sort sort) = 0;
 

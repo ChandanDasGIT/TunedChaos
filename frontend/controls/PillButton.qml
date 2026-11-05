@@ -14,10 +14,11 @@ AbstractButton {
     property bool active: false
     property bool iconAfter: false // the icon on the text's right
     property bool transparentIdle: false // no background unless hovered/active (inside a group)
+    property real sidePadding: 16 // left and right of the icon and text
     property color iconColor: filled ? Theme.background : active ? Theme.accent : Theme.text
 
     implicitHeight: 44
-    implicitWidth: Math.max(implicitHeight, row.implicitWidth + 32)
+    implicitWidth: Math.max(implicitHeight, row.implicitWidth + 2 * sidePadding)
     hoverEnabled: true
     focusPolicy: Qt.NoFocus
     opacity: enabled || Util.openDialogs > 0 ? 1 : 0.35
@@ -30,7 +31,7 @@ AbstractButton {
         Row {
             id: row
             anchors.centerIn: parent
-            spacing: 8
+            spacing: root.sidePadding < 16 ? 6 : 8
             layoutDirection: root.iconAfter ? Qt.RightToLeft : Qt.LeftToRight
 
             Icon {

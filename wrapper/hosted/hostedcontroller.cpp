@@ -60,6 +60,7 @@ HostedController::HostedController(PlayerController *player, PlaylistController 
 
     // Play reports: in order, on their own thread; progress every 10 s while playing
     m_reportPool.setMaxThreadCount(1);
+    m_coverPool.setMaxThreadCount(1);
     m_reportTimer.setInterval(10000);
     connect(&m_reportTimer, &QTimer::timeout, this, [this] {
         if (!m_reportPath.isEmpty() && m_reportPlaying)
@@ -87,6 +88,8 @@ HostedController::~HostedController()
     if (m_reportStarted)
         reportPlayback(int(HostedServer::PlayEvent::Stopped), m_reportPath, m_reportPosition);
     m_reportPool.waitForDone();
+    m_coverPool.clear();
+    m_coverPool.waitForDone();
     m_pool.waitForDone(); // no task may post to a destroyed object
     s_instance = nullptr;
 }
@@ -456,8 +459,11 @@ void HostedController::loadFolder()
                          {QStringLiteral("kind"), QStringLiteral("folder")},
                          {QStringLiteral("id"), qs(f.id)},
                          {QStringLiteral("name"), qs(f.name)},
-                         {QStringLiteral("subtitle"), f.songCount > 0 ? tr("%n item(s)", nullptr, f.songCount) : QString()},
-                         {QStringLiteral("thumbnail"), QString()}});
+                         {QStringLiteral("subtitle"), f.songCount <= 0 ? QString() : f.songCount == 1 ? tr("1 item") : tr("%1 items").arg(f.songCount)},
+                         // its own picture, else one found before from what's in it
+                         {QStringLiteral("thumbnail"), !f.coverId.empty()
+                              ? qs(m_store->coverUrl(m_accountId.toStdString(), f.coverId, CoverSize))
+                              : m_folderCovers.value(qs(f.id))}});
                  m_folderTracks.clear();
                  for (const HostedSong &song : result.first->songs)
                      m_folderTracks.push_back(trackOf(song));
@@ -468,7 +474,55 @@ void HostedController::loadFolder()
                  }
                  m_folderEntries = entries;
                  emit folderChanged();
+                 findFolderCovers(request);
              });
+}
+
+// The folders shown without a picture: one from what's in them, found in the
+// background and filled in as each comes (kept for next time).
+void HostedController::findFolderCovers(int request)
+{
+    const std::optional<HostedAccount> account = m_store->account(m_accountId.toStdString());
+    if (!account)
+        return;
+    std::vector<std::string> ids;
+    for (const QVariant &entry : std::as_const(m_folderEntries)) {
+        const QVariantMap map = entry.toMap();
+        const QString id = map.value(QStringLiteral("id")).toString();
+        if (map.value(QStringLiteral("kind")) == QLatin1String("folder")
+            && map.value(QStringLiteral("thumbnail")).toString().isEmpty() && !m_folderCovers.contains(id))
+            ids.push_back(id.toStdString());
+    }
+    if (ids.empty())
+        return;
+    m_coverPool.clear(); // (a folder left: what was still to find there isn't wanted)
+    m_coverPool.start([this, account = *account, ids, request, generation = m_generation] {
+        std::unique_ptr<HostedServer> server = HostedServer::open(account);
+        if (!server)
+            return;
+        for (const std::string &id : ids) {
+            const std::string coverId = server->folderCoverId(id);
+            const QString url = coverId.empty() ? QString() : qs(server->coverUrl(coverId, CoverSize));
+            QMetaObject::invokeMethod(this, [this, id = qs(id), url, request, generation] {
+                if (generation != m_generation)
+                    return;
+                m_folderCovers.insert(id, url);
+                if (request != m_folderRequest || url.isEmpty())
+                    return;
+                for (QVariant &entry : m_folderEntries) {
+                    QVariantMap map = entry.toMap();
+                    if (map.value(QStringLiteral("id")).toString() == id) {
+                        map.insert(QStringLiteral("thumbnail"), url);
+                        entry = map;
+                        emit folderChanged();
+                        break;
+                    }
+                }
+            }, Qt::QueuedConnection);
+            if (request != m_folderRequest) // (read without a lock: only ever stops it early)
+                break;
+        }
+    });
 }
 
 void HostedController::playFolder()

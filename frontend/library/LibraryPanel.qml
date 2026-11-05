@@ -208,33 +208,32 @@ Rectangle {
                     font.pixelSize: Theme.fontSizeLarge
                 }
 
+                // Local: how many songs; hosted: which server
                 Label {
                     Layout.fillWidth: true
-                    visible: root.source === "local" && LocalLibraryController.songCount > 0
-                    text: Util.songCount(LocalLibraryController.songCount)
+                    text: root.source === "local" && LocalLibraryController.songCount > 0
+                          ? Util.songCount(LocalLibraryController.songCount)
+                          : root.source === "hosted" && HostedController.signedIn ? HostedController.serverName : ""
                     color: Theme.textMuted
                     font.pixelSize: Theme.fontSizeSmall
                     elide: Text.ElideRight
                 }
 
-                Item {
-                    Layout.fillWidth: true
-                    visible: root.source !== "local" || LocalLibraryController.songCount === 0
-                }
-
                 ControlButton {
                     id: refreshButton
-                    visible: root.source === "local"
+                    readonly property bool hosted: root.source === "hosted"
+                    readonly property bool working: hosted ? HostedController.busy : LocalLibraryController.scanning
+                    visible: root.source === "local" || (hosted && HostedController.signedIn)
                     iconName: "refresh"
                     iconSize: 13
-                    enabled: root.hasFolders && !LocalLibraryController.scanning
-                    iconColor: LocalLibraryController.scanning ? Theme.accent : Theme.textMuted
+                    enabled: !working && (hosted || root.hasFolders)
+                    iconColor: working ? Theme.accent : Theme.textMuted
                     ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Look for new and changed songs")
-                    onClicked: LocalLibraryController.refresh()
+                    ToolTip.text: hosted ? qsTr("Load again from the server") : qsTr("Look for new and changed songs")
+                    onClicked: hosted ? HostedController.refresh(hostedView.tab) : LocalLibraryController.refresh()
 
                     RotationAnimation on rotation {
-                        running: LocalLibraryController.scanning
+                        running: refreshButton.working
                         loops: Animation.Infinite
                         from: 0
                         to: 360
@@ -641,8 +640,8 @@ Rectangle {
                     PillButton {
                         iconName: "back"
                         iconSize: 12
-                        implicitWidth: 34
-                        implicitHeight: 34
+                        implicitWidth: 36
+                        implicitHeight: 36
                         enabled: !parent.parent.atTop
                         ToolTip.visible: hovered
                         ToolTip.text: qsTr("Up one folder")
@@ -652,7 +651,7 @@ Rectangle {
                     Flickable {
                         id: pathBar
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 34
+                        Layout.preferredHeight: 36
                         clip: true
                         contentWidth: crumbs.width
                         flickableDirection: Flickable.HorizontalFlick
@@ -694,6 +693,7 @@ Rectangle {
                                         iconSize: 11
                                         text: crumb.modelData.name
                                         implicitHeight: 30
+                                        sidePadding: 10
                                         transparentIdle: true
                                         active: crumb.last
                                         onClicked: if (!crumb.last) LocalLibraryController.openFolder(crumb.modelData.path)
@@ -707,8 +707,8 @@ Rectangle {
                         visible: !parent.parent.atTop
                         iconName: "play"
                         iconSize: 11
-                        implicitWidth: 34
-                        implicitHeight: 34
+                        implicitWidth: 36
+                        implicitHeight: 36
                         filled: true
                         ToolTip.visible: hovered
                         ToolTip.text: qsTr("Play all (subfolders too)")
@@ -720,8 +720,8 @@ Rectangle {
                         visible: !parent.parent.atTop
                         iconName: "chevronDown"
                         iconSize: 11
-                        implicitWidth: 34
-                        implicitHeight: 34
+                        implicitWidth: 36
+                        implicitHeight: 36
                         ToolTip.visible: hovered
                         ToolTip.text: qsTr("Add all (subfolders too)")
                         onClicked: addAllMenu.openAt(addFolderButton,
@@ -755,6 +755,7 @@ Rectangle {
                                 LibraryTile {
                                     readonly property var folder: LocalLibraryController.subfolders[folderCell.modelData] ?? ({})
                                     icon: "folder"
+                                    image: folder.coverPath ? Util.coverSource(folder.coverPath, "") : ""
                                     title: folder.name || ""
                                     subtitle: folder.location || Util.songCount(folder.count || 0)
                                     onTapped: {
@@ -806,6 +807,7 @@ Rectangle {
                                 name: modelData.name
                                 path: modelData.path
                                 count: modelData.count
+                                coverPath: modelData.coverPath || ""
                                 location: modelData.location || ""
                                 onOpened: {
                                     LocalLibraryController.openFolder(path)
