@@ -1667,28 +1667,6 @@ Rectangle {
                         SettingsCard {
                             readonly property bool hiddenHere: !root.android
                             visible: !hiddenHere // (phones only)
-                            title: qsTr("Home-screen widget")
-
-                            SettingsRow {
-                                id: widgetRow
-                                property string result: ""
-                                Layout.fillWidth: true
-                                title: qsTr("Player widget")
-                                description: result !== "" ? result
-                                    : qsTr("The song with previous, play / pause and next, on your home screen. You can also add it from the launcher's widgets.")
-
-                                PillButton {
-                                    text: qsTr("Add")
-                                    implicitHeight: 32
-                                    onClicked: widgetRow.result = Files.addPlayerWidget() ? ""
-                                        : qsTr("This launcher can't add it from here: long-press the home screen, open Widgets and pick Tuned Chaos.")
-                                }
-                            }
-                        }
-
-                        SettingsCard {
-                            readonly property bool hiddenHere: !root.android
-                            visible: !hiddenHere // (phones only)
                             title: qsTr("Default panel")
 
                             SettingsRow {

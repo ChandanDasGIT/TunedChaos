@@ -46,9 +46,7 @@ public class MediaPlaybackService extends Service {
 
     // What plays (set from C++, any thread)
     private static String s_title = "", s_artist = "", s_album = "", s_cover = "";
-    private static boolean s_playing = false, s_hasTrack = false;
-    // C++ has spoken in this process (the player is loaded: buttons can reach it)
-    private static boolean s_nativeReady = false;
+    private static boolean s_playing = false;
     private static long s_positionMs = 0, s_durationMs = 0;
     private static MediaPlaybackService s_service;
 
@@ -80,10 +78,7 @@ public class MediaPlaybackService extends Service {
             s_playing = playing;
             s_positionMs = positionMs;
             s_durationMs = durationMs;
-            s_hasTrack = hasTrack;
-            s_nativeReady = true;
         }
-        PlayerWidget.refresh(context);
         Intent intent = new Intent(context, MediaPlaybackService.class);
         if (hasTrack) {
             if (s_service != null) {
@@ -95,33 +90,6 @@ public class MediaPlaybackService extends Service {
         } else if (s_service != null) {
             context.stopService(intent);
         }
-    }
-
-    // What the home-screen widget shows
-    static final class State {
-        boolean running, hasTrack, playing;
-        String title, artist, cover;
-    }
-    static State state() {
-        State state = new State();
-        synchronized (MediaPlaybackService.class) {
-            state.running = s_nativeReady;
-            state.hasTrack = s_hasTrack;
-            state.playing = s_playing;
-            state.title = s_title;
-            state.artist = s_artist;
-            state.cover = s_cover;
-        }
-        return state;
-    }
-    // A widget button: to the player, if it's loaded in this process (false: it isn't)
-    static boolean sendAction(int action) {
-        synchronized (MediaPlaybackService.class) {
-            if (!s_nativeReady)
-                return false;
-        }
-        nativeAction(action);
-        return true;
     }
 
     // From C++ at start: ask for reading music and showing notifications

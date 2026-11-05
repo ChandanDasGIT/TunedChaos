@@ -171,8 +171,6 @@ chmod +x TunedChaos-*.AppImage
   terminal, keeps the app in the tray, still playing. Click the icon to show or
   hide the window; its menu has play / pause, next, previous and Quit. It can be
   turned off in Settings → General.
-- **Home-screen widget** (Android): the song with previous, play / pause and
-  next; add it from the launcher's widgets or Settings → Layout Customisation.
 - **Backup and restore** (Settings → About): one `.tcbackup` file with your
   settings, playlists, Queue, history, moods, smart playlists, library and
   server sign-ins; restoring it (on any of your devices) restarts the app with it.

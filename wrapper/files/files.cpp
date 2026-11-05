@@ -30,15 +30,6 @@ void Files::minimizeApp() const
 #endif
 }
 
-bool Files::addPlayerWidget() const
-{
-#ifdef Q_OS_ANDROID
-    return QJniObject::callStaticMethod<jboolean>("io/github/chandandasgit/tunedchaos/MainActivity", "addPlayerWidget");
-#else
-    return false;
-#endif
-}
-
 QString Files::toPath(const QUrl &url) const
 {
     return url.isLocalFile() ? QDir::cleanPath(url.toLocalFile()) : QDir::cleanPath(url.toString());
