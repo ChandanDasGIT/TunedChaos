@@ -49,6 +49,7 @@ Rectangle {
                     border.color: Theme.border
 
                     Label {
+                        textFormat: Text.PlainText
                         anchors.centerIn: parent
                         text: cellItem.modelData
                         color: cellItem.present ? Theme.accent : Theme.textDim

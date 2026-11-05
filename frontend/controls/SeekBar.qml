@@ -184,6 +184,7 @@ Item {
 
         Label {
             id: elapsedLabel
+            textFormat: Text.PlainText
             x: root.pad
             text: Util.formatTime(root.progress * PlayerController.duration)
             color: root.dragging ? Theme.text : Theme.textMuted
@@ -194,6 +195,7 @@ Item {
         }
 
         Label {
+            textFormat: Text.PlainText
             anchors.right: parent.right
             anchors.rightMargin: root.pad
             text: root.showRemaining

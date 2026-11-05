@@ -3,6 +3,7 @@ import QtQuick
 // Font Awesome glyph by name, e.g. Icon { name: "play" }. The names are the
 // cases of glyph() below (a function, so every Icon shares one table).
 Text {
+    textFormat: Text.PlainText
     property string name
     property real size: 16
 

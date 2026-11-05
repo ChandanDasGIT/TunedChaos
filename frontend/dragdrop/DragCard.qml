@@ -58,6 +58,7 @@ Rectangle {
             spacing: 1
 
             Text {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: SongDrag.title
                 elide: Text.ElideRight
@@ -67,6 +68,7 @@ Rectangle {
             }
 
             Text {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 visible: text !== ""
                 text: SongDrag.subtitle

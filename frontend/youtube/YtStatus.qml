@@ -33,6 +33,7 @@ Column {
     }
 
     Label {
+        textFormat: Text.PlainText
         width: parent.width
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.WordWrap

@@ -145,6 +145,7 @@ Item {
             }
 
             Label {
+                textFormat: Text.PlainText
                 anchors.verticalCenter: parent.verticalCenter
                 visible: -root.swipeX > 80
                 text: qsTr("Delete")
@@ -389,6 +390,7 @@ Item {
         }
 
         Label {
+            textFormat: Text.PlainText
             width: root.titleWidth
             height: parent.height
             leftPadding: 6
@@ -404,6 +406,7 @@ Item {
         }
 
         Label {
+            textFormat: Text.PlainText
             width: root.artistAlbumWidth
             height: parent.height
             leftPadding: 6
@@ -416,6 +419,7 @@ Item {
         }
 
         Label {
+            textFormat: Text.PlainText
             width: root.trackWidth
             height: parent.height
             leftPadding: 6
@@ -430,6 +434,7 @@ Item {
         }
 
         Label {
+            textFormat: Text.PlainText
             width: root.durationWidth
             height: parent.height
             leftPadding: 6

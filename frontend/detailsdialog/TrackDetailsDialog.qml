@@ -215,6 +215,7 @@ Popup {
             }
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: qsTr("Track details")
                 color: Theme.text
@@ -271,6 +272,7 @@ Popup {
 
                         Label {
                             id: tagLabel
+                            textFormat: Text.PlainText
                             anchors.left: parent.left
                             anchors.verticalCenter: parent.verticalCenter
                             width: 96
@@ -307,6 +309,7 @@ Popup {
             }
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: qsTr("Saving changes the file itself (a safety copy is kept until it is done). Other tags, the cover and the audio stay as they are.")
                 color: Theme.textMuted
@@ -410,6 +413,7 @@ Popup {
                 }
 
                 Label {
+                    textFormat: Text.PlainText
                     text: qsTr("Audio pipeline").toUpperCase()
                     color: Theme.accent
                     font.pixelSize: Theme.fontSizeSmall
@@ -418,6 +422,7 @@ Popup {
                 }
 
                 Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignRight
                     text: root.pipelineSummary
@@ -435,6 +440,7 @@ Popup {
         }
 
         Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             visible: root.pipelineOpen && !root.pipelineKnown
             text: qsTr("Play this song to see how it reaches your speakers.")
@@ -492,6 +498,7 @@ Popup {
                             }
 
                             Label {
+                                textFormat: Text.PlainText
                                 Layout.fillWidth: true
                                 text: stage.modelData.name
                                 color: Theme.text
@@ -507,6 +514,7 @@ Popup {
 
                                 Label {
                                     id: statusLabel
+                                    textFormat: Text.PlainText
                                     anchors.centerIn: parent
                                     text: stage.modelData.status
                                     color: stage.modelData.on ? Theme.accent : Theme.textMuted
@@ -528,12 +536,14 @@ Popup {
                                 spacing: Theme.padding
 
                                 Label {
+                                    textFormat: Text.PlainText
                                     text: stageRow.modelData[0]
                                     color: Theme.textMuted
                                     font.pixelSize: Theme.fontSizeSmall
                                 }
 
                                 Label {
+                                    textFormat: Text.PlainText
                                     Layout.fillWidth: true
                                     horizontalAlignment: Text.AlignRight
                                     text: stageRow.modelData[1]
@@ -576,6 +586,7 @@ Popup {
                 }
 
                 Label {
+                    textFormat: Text.PlainText
                     text: section.modelData.title.toUpperCase()
                     color: Theme.accent
                     font.pixelSize: Theme.fontSizeSmall
@@ -584,6 +595,7 @@ Popup {
                 }
 
                 Label {
+                    textFormat: Text.PlainText
                     visible: section.modelData.collapsible
                     text: "(" + section.modelData.fields.length + ")"
                     color: Theme.textMuted
@@ -611,6 +623,7 @@ Popup {
                 spacing: Theme.padding
 
                 Label {
+                    textFormat: Text.PlainText
                     Layout.preferredWidth: 130
                     Layout.alignment: Qt.AlignTop
                     text: field.modelData.label
@@ -658,6 +671,7 @@ Popup {
                 }
 
                 Label {
+                    textFormat: Text.PlainText
                     text: qsTr("From YouTube Music").toUpperCase()
                     color: Theme.accent
                     font.pixelSize: Theme.fontSizeSmall
@@ -666,6 +680,7 @@ Popup {
                 }
 
                 Label {
+                    textFormat: Text.PlainText
                     visible: yt.lookupState === "matched" && root.ytInfo.close === true
                     text: qsTr("(close match)")
                     color: Theme.textMuted
@@ -677,6 +692,7 @@ Popup {
         // Not matched (yet)
         Label {
             id: statusLabel
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             visible: yt.lookupState !== "matched"
             wrapMode: Text.WordWrap
@@ -758,6 +774,7 @@ Popup {
         spacing: Theme.padding
 
         Label {
+            textFormat: Text.PlainText
             Layout.preferredWidth: 70
             Layout.alignment: Qt.AlignTop
             text: ytField.label

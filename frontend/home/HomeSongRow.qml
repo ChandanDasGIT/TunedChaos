@@ -76,6 +76,7 @@ Rectangle {
             spacing: 1
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: root.song.title
                 color: root.isCurrent ? Theme.accent : Theme.text
@@ -85,6 +86,7 @@ Rectangle {
             }
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 visible: text !== ""
                 text: root.song.artist
@@ -95,6 +97,7 @@ Rectangle {
         }
 
         Label {
+            textFormat: Text.PlainText
             visible: root.note !== ""
             text: root.note
             color: Theme.textMuted

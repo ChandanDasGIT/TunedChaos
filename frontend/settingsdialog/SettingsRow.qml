@@ -18,6 +18,7 @@ RowLayout {
         spacing: 2
 
         Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             visible: root.title !== ""
             text: root.title
@@ -27,6 +28,7 @@ RowLayout {
         }
 
         Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             visible: root.description !== ""
             text: root.description

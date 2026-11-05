@@ -101,6 +101,7 @@ Rectangle {
             clip: true
 
             Label {
+                textFormat: Text.PlainText
                 text: cell.label
                 color: cell.active || sortArea.containsMouse ? Theme.text : Theme.textMuted
                 font.pixelSize: Theme.fontSizeSmall

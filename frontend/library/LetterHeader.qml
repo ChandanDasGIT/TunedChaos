@@ -30,6 +30,7 @@ Item {
         Behavior on color { ColorAnimation { duration: Theme.animFast } }
 
         Label {
+            textFormat: Text.PlainText
             anchors.centerIn: parent
             text: root.letter
             color: Theme.accent

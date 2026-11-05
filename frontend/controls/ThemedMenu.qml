@@ -63,6 +63,7 @@ Menu {
             }
 
             Label {
+                textFormat: Text.PlainText
                 anchors.left: itemIcon.right
                 anchors.leftMargin: Theme.spacing
                 anchors.right: chevron.left

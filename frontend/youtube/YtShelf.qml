@@ -16,6 +16,7 @@ ColumnLayout {
     spacing: Theme.spacing
 
     Label {
+        textFormat: Text.PlainText
         Layout.leftMargin: Theme.padding
         Layout.topMargin: Theme.spacing
         text: root.title

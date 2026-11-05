@@ -94,6 +94,7 @@ RowLayout {
             spacing: 2
 
             Label {
+                textFormat: Text.PlainText
                 width: parent.width
                 padding: Theme.spacing
                 text: qsTr("Add to a mood")
@@ -128,6 +129,7 @@ RowLayout {
                         spacing: Theme.padding
 
                         Label {
+                            textFormat: Text.PlainText
                             Layout.leftMargin: Theme.spacing
                             Layout.preferredWidth: 32
                             horizontalAlignment: Text.AlignHCenter
@@ -136,6 +138,7 @@ RowLayout {
                         }
 
                         Label {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             text: moodRow.modelData.name
                             color: moodRow.inMood ? Theme.accent : Theme.text

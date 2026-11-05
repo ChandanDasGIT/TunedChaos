@@ -192,6 +192,7 @@ Rectangle {
                 }
 
                 Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: root.searching ? qsTr("Search settings")
                           : root.page >= 0 ? root.pages[root.page].name : qsTr("Settings")
@@ -420,6 +421,7 @@ Rectangle {
                                 Layout.fillWidth: true
 
                                 Label {
+                                    textFormat: Text.PlainText
                                     Layout.fillWidth: true
                                     text: HistoryController.count === 1 ? qsTr("1 song listened to so far.")
                                                                         : qsTr("%1 songs listened to so far.").arg(HistoryController.count)
@@ -499,6 +501,7 @@ Rectangle {
                                         }
 
                                         Label {
+                                            textFormat: Text.PlainText
                                             Layout.fillWidth: true
                                             text: deviceRow.modelData.name
                                             color: deviceRow.current ? Theme.accent : Theme.text
@@ -569,6 +572,7 @@ Rectangle {
 
                             // Measuring the library's songs (LoudnessController)
                             Label {
+                                textFormat: Text.PlainText
                                 Layout.fillWidth: true
                                 visible: SettingsController.replayGain !== 0 && LoudnessController.songCount > 0
                                 text: LoudnessController.doneCount < LoudnessController.songCount
@@ -752,6 +756,7 @@ Rectangle {
 
                             // The hint, then Reset, both centred under the sliders
                             Label {
+                                textFormat: Text.PlainText
                                 Layout.fillWidth: true
                                 horizontalAlignment: Text.AlignHCenter
                                 text: root.android ? qsTr("Hz · ±12 dB. Double-tap a slider to set it back to 0.")
@@ -841,6 +846,7 @@ Rectangle {
                                 spacing: Theme.spacing
 
                                 Label {
+                                    textFormat: Text.PlainText
                                     Layout.fillWidth: true
                                     text: SettingsController.resumeSession
                                           ? qsTr("Restart the app to use the new size. The song you're playing picks up where it was.")
@@ -881,6 +887,7 @@ Rectangle {
                                     }
 
                                     Label {
+                                        textFormat: Text.PlainText
                                         Layout.preferredWidth: 38
                                         horizontalAlignment: Text.AlignRight
                                         text: Math.round(SettingsController.coverTintStrength * 100) + "%"
@@ -1015,6 +1022,7 @@ Rectangle {
                                         }
 
                                         Label {
+                                            textFormat: Text.PlainText
                                             Layout.fillWidth: true
                                             text: folderRow.modelData
                                             color: Theme.text
@@ -1080,6 +1088,7 @@ Rectangle {
                                         }
 
                                         Label {
+                                            textFormat: Text.PlainText
                                             Layout.fillWidth: true
                                             text: excludedRow.modelData
                                             color: Theme.text
@@ -1140,6 +1149,7 @@ Rectangle {
                                 }
 
                                 Label {
+                                    textFormat: Text.PlainText
                                     Layout.preferredWidth: 44
                                     horizontalAlignment: Text.AlignRight
                                     text: SettingsController.coverSize + "%"
@@ -1215,12 +1225,14 @@ Rectangle {
                                     spacing: Theme.spacing
 
                                     Label {
+                                        textFormat: Text.PlainText
                                         text: (sourceRow.index + 1) + "."
                                         color: Theme.textMuted
                                         font.pixelSize: Theme.fontSize
                                     }
 
                                     Label {
+                                        textFormat: Text.PlainText
                                         Layout.fillWidth: true
                                         text: sourceRow.modelData ? sourceRow.modelData.name : ""
                                         color: sourceRow.modelData && sourceRow.modelData.enabled ? Theme.text : Theme.textMuted
@@ -1470,6 +1482,7 @@ Rectangle {
                             title: qsTr("Tuned Chaos")
 
                             Label {
+                                textFormat: Text.PlainText
                                 Layout.fillWidth: true
                                 text: qsTr("Version %1").arg(Qt.application.version)
                                 color: Theme.text
@@ -1477,6 +1490,7 @@ Rectangle {
                             }
 
                             Label {
+                                textFormat: Text.PlainText
                                 Layout.fillWidth: true
                                 // The sound system differs: PipeWire on Linux, miniaudio elsewhere
                                 text: qsTr("A music player for your local music and YouTube Music. Built with Qt, FFmpeg, %1 and TagLib.")
@@ -1611,6 +1625,7 @@ Rectangle {
                                     spacing: Theme.spacing
 
                                     Label {
+                                        textFormat: Text.PlainText
                                         Layout.fillWidth: true
                                         text: root.panelNames[panelRow.modelData] ?? ""
                                         color: panelRow.shownInBar ? Theme.text : Theme.textMuted
@@ -1870,6 +1885,7 @@ Rectangle {
                             spacing: 1
 
                             Label {
+                                textFormat: Text.PlainText
                                 Layout.fillWidth: true
                                 text: result.modelData.title
                                 color: Theme.text
@@ -1877,6 +1893,7 @@ Rectangle {
                                 elide: Text.ElideRight
                             }
                             Label {
+                                textFormat: Text.PlainText
                                 Layout.fillWidth: true
                                 visible: result.modelData.item !== null
                                 text: root.pages[result.modelData.page].name
@@ -1886,6 +1903,7 @@ Rectangle {
                                 elide: Text.ElideRight
                             }
                             Label {
+                                textFormat: Text.PlainText
                                 Layout.fillWidth: true
                                 visible: text !== ""
                                 text: result.modelData.description
@@ -1906,6 +1924,7 @@ Rectangle {
                 }
 
                 Label {
+                    textFormat: Text.PlainText
                     anchors.centerIn: parent
                     width: parent.width - 2 * Theme.padding
                     visible: root.searching && results.count === 0
@@ -2034,6 +2053,7 @@ Rectangle {
                 spacing: 1
 
                 Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: root.pages[row.pageIndex].name
                     color: Theme.text
@@ -2042,6 +2062,7 @@ Rectangle {
                     elide: Text.ElideRight
                 }
                 Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: root.pages[row.pageIndex].summary
                     color: Theme.textMuted
@@ -2145,6 +2166,7 @@ Rectangle {
 
         // (Labels fill the column, so the bands can share the row's width.)
         Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             text: (band.value > 0 ? "+" : "") + Math.round(band.value)
@@ -2225,6 +2247,7 @@ Rectangle {
         }
 
         Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             text: band.label
@@ -2351,6 +2374,7 @@ Rectangle {
             spacing: Theme.padding
 
             Label {
+                textFormat: Text.PlainText
                 text: card.title.toUpperCase()
                 color: Theme.accent
                 font.pixelSize: Theme.fontSizeSmall
@@ -2383,6 +2407,7 @@ Rectangle {
         }
 
         Label {
+            textFormat: Text.PlainText
             Layout.preferredWidth: 44
             horizontalAlignment: Text.AlignHCenter
             text: stepper.text
@@ -2422,6 +2447,7 @@ Rectangle {
                 implicitHeight: 26
 
                 Label {
+                    textFormat: Text.PlainText
                     anchors.left: parent.left
                     anchors.right: keys.left
                     anchors.rightMargin: Theme.padding
@@ -2443,6 +2469,7 @@ Rectangle {
 
                     Label {
                         id: keysLabel
+                        textFormat: Text.PlainText
                         anchors.centerIn: parent
                         text: shortcutRow.modelData[1]
                         color: Theme.textMuted

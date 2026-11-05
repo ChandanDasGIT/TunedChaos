@@ -47,6 +47,7 @@ T.ToolTip {
     onOpened: if (touchOnly) close()
 
     contentItem: Text {
+        textFormat: Text.PlainText
         visible: !control.touchOnly
         text: control.text
         font.pixelSize: 12

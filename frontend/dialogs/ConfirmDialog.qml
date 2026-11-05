@@ -49,6 +49,7 @@ Popup {
         spacing: Theme.padding
 
         Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             text: root.title
             color: Theme.text
@@ -58,6 +59,7 @@ Popup {
         }
 
         Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             text: root.message
             color: Theme.textMuted

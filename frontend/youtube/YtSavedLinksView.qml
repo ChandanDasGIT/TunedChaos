@@ -85,6 +85,7 @@ Item {
             visible: YouTubeController.savedSongs.length > 0
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: YouTubeController.savedSongs.length === 1 ? qsTr("1 saved song")
                                                                : qsTr("%1 saved songs").arg(YouTubeController.savedSongs.length)

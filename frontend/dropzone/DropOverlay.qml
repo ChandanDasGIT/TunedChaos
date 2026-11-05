@@ -63,6 +63,7 @@ DropArea {
             }
 
             Label {
+                textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: qsTr("Drop to add to the Queue")
                 color: Theme.text
@@ -89,6 +90,7 @@ DropArea {
 
         Label {
             id: progressLabel
+            textFormat: Text.PlainText
             anchors.centerIn: parent
             text: LibraryController.totalCount > 0
                   ? qsTr("Scanning… %1 / %2").arg(LibraryController.scannedCount).arg(LibraryController.totalCount)

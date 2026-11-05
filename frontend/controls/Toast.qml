@@ -32,6 +32,7 @@ Rectangle {
 
     Label {
         id: label
+        textFormat: Text.PlainText
         anchors.centerIn: parent
         width: Math.min(implicitWidth, root.width - 36)
         color: Theme.text

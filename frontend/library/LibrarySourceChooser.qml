@@ -77,6 +77,7 @@ Item {
                 spacing: 4
 
                 Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: card.title
                     color: Theme.text
@@ -86,6 +87,7 @@ Item {
                 }
 
                 Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: card.subtitle
                     color: Theme.textMuted

@@ -68,6 +68,7 @@ Item {
                     spacing: Theme.spacing
 
                     Label {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         text: YouTubeController.artistName
                         color: Theme.text
@@ -89,6 +90,7 @@ Item {
             }
 
             Label {
+                textFormat: Text.PlainText
                 visible: YouTubeController.artistSongs.length > 0
                 Layout.leftMargin: Theme.padding
                 Layout.topMargin: Theme.spacing

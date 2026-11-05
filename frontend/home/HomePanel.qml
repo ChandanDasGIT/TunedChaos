@@ -135,6 +135,7 @@ Rectangle {
 
             // Greeting
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 Layout.topMargin: Theme.padding * 2
                 Layout.rightMargin: 60 // clear of the pin / close buttons
@@ -158,6 +159,7 @@ Rectangle {
                     spacing: 2
 
                     Label {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         text: qsTr("Your Mix")
                         color: Theme.text
@@ -166,6 +168,7 @@ Rectangle {
                     }
 
                     Label {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         text: root.hasHistory ? qsTr("The songs you play most, shuffled")
                             : LocalLibraryController.songCount > 0 ? qsTr("Songs from your library, shuffled")
@@ -255,6 +258,7 @@ Rectangle {
                             }
 
                             Label {
+                                textFormat: Text.PlainText
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: moodTile.modelData.name
                                 color: Theme.text
@@ -263,6 +267,7 @@ Rectangle {
                             }
 
                             Label {
+                                textFormat: Text.PlainText
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: Util.songCount(moodTile.modelData.count)
                                 color: Theme.textMuted
@@ -396,6 +401,7 @@ Rectangle {
                 Layout.topMargin: Theme.spacing
 
                 Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: qsTr("Smart playlists")
                     color: Theme.text
@@ -477,6 +483,7 @@ Rectangle {
                         spacing: 2
 
                         Label {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             text: qsTr("Mix – %1").arg(HistoryController.favoriteYouTube.title || "")
                             color: Theme.text
@@ -485,6 +492,7 @@ Rectangle {
                             elide: Text.ElideRight
                         }
                         Label {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             text: qsTr("What YouTube Music plays after the song you play most")
                             color: Theme.textMuted
@@ -509,6 +517,7 @@ Rectangle {
                 visible: root.hasHistory
 
                 Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: qsTr("History")
                     color: Theme.text
@@ -554,6 +563,7 @@ Rectangle {
                 visible: root.hasHistory || LocalLibraryController.songCount > 0
 
                 Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: qsTr("Your stats")
                     color: Theme.text
@@ -591,6 +601,7 @@ Rectangle {
 
             // Nothing listened to yet
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 Layout.topMargin: Theme.padding
                 visible: !root.hasHistory
@@ -634,6 +645,7 @@ Rectangle {
             }
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: root.mood.name
                 color: Theme.text
@@ -682,6 +694,7 @@ Rectangle {
             }
 
             Label {
+                textFormat: Text.PlainText
                 anchors.centerIn: parent
                 width: parent.width - 4 * Theme.padding
                 visible: root.moodSongs.length === 0
@@ -724,6 +737,7 @@ Rectangle {
             }
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: qsTr("History")
                 color: Theme.text
@@ -759,6 +773,7 @@ Rectangle {
                 width: historyList.width
 
                 Label {
+                    textFormat: Text.PlainText
                     visible: entry.firstOfDay
                     leftPadding: 8
                     topPadding: entry.index === 0 ? 4 : Theme.padding
@@ -780,6 +795,7 @@ Rectangle {
             }
 
             Label {
+                textFormat: Text.PlainText
                 anchors.centerIn: parent
                 visible: historyList.count === 0
                 text: qsTr("No songs listened to yet.")
@@ -831,6 +847,7 @@ Rectangle {
                 }
 
                 Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: qsTr("Your stats")
                     color: Theme.text
@@ -871,6 +888,7 @@ Rectangle {
             TopList { title: qsTr("Top songs"); entries: HistoryController.stats.topSongs ?? [] }
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 Layout.topMargin: Theme.spacing
                 text: qsTr("All time, from your listening history (kept on this computer only).")
@@ -919,6 +937,7 @@ Rectangle {
             spacing: 2
 
             Label {
+                textFormat: Text.PlainText
                 width: parent.width
                 text: String(tile.value)
                 color: Theme.accent
@@ -930,6 +949,7 @@ Rectangle {
                 elide: Text.ElideRight
             }
             Label {
+                textFormat: Text.PlainText
                 width: parent.width
                 text: tile.label
                 color: Theme.textMuted
@@ -965,6 +985,7 @@ Rectangle {
                 spacing: Theme.padding
 
                 Label {
+                    textFormat: Text.PlainText
                     Layout.preferredWidth: 22
                     text: index + 1
                     color: Theme.textDim
@@ -973,6 +994,7 @@ Rectangle {
                     horizontalAlignment: Text.AlignRight
                 }
                 Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: modelData.name
                     color: Theme.text
@@ -980,6 +1002,7 @@ Rectangle {
                     elide: Text.ElideRight
                 }
                 Label {
+                    textFormat: Text.PlainText
                     text: modelData.plays === 1 ? qsTr("1 play") : qsTr("%1 plays").arg(modelData.plays)
                     color: Theme.textMuted
                     font.pixelSize: Theme.fontSizeSmall
@@ -1050,6 +1073,7 @@ Rectangle {
                 spacing: 1
 
                 Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: smart.playlist.name
                     color: Theme.text
@@ -1061,6 +1085,7 @@ Rectangle {
                     lineHeight: 0.95
                 }
                 Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: Util.songCount(smart.playlist.count)
                     color: Theme.textMuted
@@ -1081,6 +1106,7 @@ Rectangle {
     }
 
     component SectionTitle: Label {
+        textFormat: Text.PlainText
         Layout.fillWidth: true
         Layout.topMargin: Theme.spacing
         color: Theme.text
@@ -1148,6 +1174,7 @@ Rectangle {
         }
 
         Label {
+            textFormat: Text.PlainText
             anchors.top: art.bottom
             anchors.topMargin: 6
             width: parent.width
@@ -1159,6 +1186,7 @@ Rectangle {
         }
 
         Label {
+            textFormat: Text.PlainText
             anchors.top: art.bottom
             anchors.topMargin: 24
             width: parent.width

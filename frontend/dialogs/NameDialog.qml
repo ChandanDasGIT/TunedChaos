@@ -58,6 +58,7 @@ Popup {
         spacing: Theme.padding
 
         Label {
+            textFormat: Text.PlainText
             text: root.title
             color: Theme.text
             font.pixelSize: Theme.fontSizeLarge

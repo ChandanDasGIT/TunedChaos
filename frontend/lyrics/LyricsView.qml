@@ -79,6 +79,7 @@ Item {
                 spacing: 0
 
                 Label {
+                    textFormat: Text.PlainText
                     Layout.maximumWidth: 260
                     text: PlaylistController.currentTitle !== "" ? PlaylistController.currentTitle : PlayerController.title
                     color: Theme.text
@@ -88,6 +89,7 @@ Item {
                 }
 
                 Label {
+                    textFormat: Text.PlainText
                     Layout.maximumWidth: 260
                     visible: text !== ""
                     text: PlaylistController.currentSubtitle
@@ -103,6 +105,7 @@ Item {
     // looks like the highlighting is broken).
     Label {
         id: untimedNote
+        textFormat: Text.PlainText
         opacity: root.phase(0.35, 1)
         anchors.top: capsule.bottom
         anchors.topMargin: Theme.spacing
@@ -143,6 +146,7 @@ Item {
 
         delegate: Label {
             id: line
+            textFormat: Text.PlainText
 
             required property var modelData
             required property int index
@@ -204,6 +208,7 @@ Item {
         }
 
         Label {
+            textFormat: Text.PlainText
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
             text: LyricsController.status === LyricsController.Loading ? qsTr("Looking for lyrics…")
@@ -214,6 +219,7 @@ Item {
         }
 
         Label {
+            textFormat: Text.PlainText
             width: parent.width
             visible: LyricsController.status === LyricsController.NotFound
             horizontalAlignment: Text.AlignHCenter
@@ -280,6 +286,7 @@ Item {
         }
 
         Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             visible: LyricsController.status === LyricsController.Found
             text: qsTr("from %1").arg(LyricsController.sourceName)

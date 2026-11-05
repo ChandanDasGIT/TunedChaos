@@ -87,6 +87,7 @@ Rectangle {
                 }
 
                 Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: qsTr("YouTube Music")
                     color: Theme.text
@@ -104,6 +105,7 @@ Rectangle {
 
                     Label {
                         id: warningLabel
+                        textFormat: Text.PlainText
                         anchors.centerIn: parent
                         text: qsTr("yt-dlp not found")
                         color: Theme.error
@@ -269,6 +271,7 @@ Rectangle {
 
         Label {
             id: toastLabel
+            textFormat: Text.PlainText
             anchors.centerIn: parent
             width: Math.min(implicitWidth, toast.width - 24)
             color: Theme.text

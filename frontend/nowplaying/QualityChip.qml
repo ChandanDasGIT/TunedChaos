@@ -45,6 +45,7 @@ Rectangle {
 
     Label {
         id: label
+        textFormat: Text.PlainText
         anchors.centerIn: parent
         text: root.text
         color: chipHover.hovered ? Theme.text : Theme.textMuted

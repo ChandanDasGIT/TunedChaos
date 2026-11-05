@@ -109,6 +109,7 @@ Rectangle {
             spacing: 2
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: root.song.title || ""
                 color: root.isCurrent ? Theme.accent : Theme.text
@@ -118,6 +119,7 @@ Rectangle {
             }
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: (root.song.artists || "")
                       + (root.song.duration > 0 ? "  ·  " + Util.formatTime(root.song.duration) : "")

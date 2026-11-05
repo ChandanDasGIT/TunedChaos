@@ -50,6 +50,7 @@ Rectangle {
 
         Text {
             id: label
+            textFormat: Text.PlainText
             anchors.centerIn: parent
             text: root.text
             color: root.over ? Theme.background : Theme.text

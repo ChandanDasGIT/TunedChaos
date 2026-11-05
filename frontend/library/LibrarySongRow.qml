@@ -133,6 +133,7 @@ Rectangle {
             spacing: 2
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: root.title
                 color: root.isCurrent ? Theme.accent : Theme.text
@@ -142,6 +143,7 @@ Rectangle {
             }
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: [root.artist, root.showAlbum ? root.album : ""].filter(s => s !== "").join("  ·  ")
                 color: Theme.textMuted
@@ -151,6 +153,7 @@ Rectangle {
         }
 
         Label {
+            textFormat: Text.PlainText
             visible: !root.showButtons && !root.isCurrent
             text: Util.formatTime(root.duration)
             color: Theme.textMuted

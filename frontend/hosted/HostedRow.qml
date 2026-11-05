@@ -67,6 +67,7 @@ Rectangle {
             spacing: 2
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: root.title
                 color: root.playing ? Theme.accent : Theme.text
@@ -76,6 +77,7 @@ Rectangle {
             }
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 visible: text !== ""
                 text: root.subtitle
@@ -86,6 +88,7 @@ Rectangle {
         }
 
         Label {
+            textFormat: Text.PlainText
             visible: root.isSong && root.duration > 0
             text: Util.formatTime(root.duration)
             color: Theme.textMuted

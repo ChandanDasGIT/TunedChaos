@@ -25,6 +25,7 @@ ColumnLayout {
         }
 
         Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             text: YouTubeController.collectionTitle
             color: Theme.text

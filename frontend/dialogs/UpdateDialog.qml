@@ -60,6 +60,7 @@ Popup {
         spacing: Theme.padding
 
         Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             text: root.needsPermission ? qsTr("Allow installing")
                 : root.installed ? (Qt.platform.os === "windows" ? qsTr("Version %1 is ready").arg(root.version)
@@ -73,6 +74,7 @@ Popup {
         }
 
         Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             visible: !root.downloading
             text: root.needsPermission
@@ -125,6 +127,7 @@ Popup {
         }
 
         Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             visible: root.downloading
             text: qsTr("%1%").arg(root.progress)
@@ -133,6 +136,7 @@ Popup {
         }
 
         Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             visible: root.error !== ""
             text: root.error

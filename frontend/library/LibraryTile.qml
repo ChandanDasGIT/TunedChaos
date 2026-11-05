@@ -95,6 +95,7 @@ Item {
         }
 
         Label {
+            textFormat: Text.PlainText
             anchors.top: cover.bottom
             anchors.topMargin: 6
             x: 8
@@ -107,6 +108,7 @@ Item {
         }
 
         Label {
+            textFormat: Text.PlainText
             anchors.top: cover.bottom
             anchors.topMargin: 24
             x: 8

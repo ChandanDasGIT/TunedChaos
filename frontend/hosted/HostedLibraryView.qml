@@ -54,6 +54,7 @@ Item {
         spacing: Theme.spacing
 
         Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             text: qsTr("Connect your Jellyfin server")
             color: Theme.text
@@ -62,6 +63,7 @@ Item {
         }
 
         Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             text: qsTr("Its songs play here like your own. Your password is only used to sign in; it isn't kept.")
             color: Theme.textMuted
@@ -95,6 +97,7 @@ Item {
             spacing: Theme.spacing
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: HostedController.busy ? qsTr("Connecting…") : HostedController.error
                 color: HostedController.busy ? Theme.textMuted : Theme.error
@@ -258,6 +261,7 @@ Item {
         }
 
         Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             Layout.leftMargin: Theme.padding
             Layout.rightMargin: Theme.padding
@@ -291,6 +295,7 @@ Item {
 
                 Label {
                     id: loadingLabel
+                    textFormat: Text.PlainText
                     anchors.centerIn: parent
                     text: qsTr("Loading…")
                     color: Theme.textMuted
@@ -439,6 +444,7 @@ Item {
                 }
 
                 Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: HostedController.detailTitle
                     color: Theme.text

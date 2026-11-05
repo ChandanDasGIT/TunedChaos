@@ -51,6 +51,7 @@ Item {
             }
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
                 text: qsTr("Your YouTube Music library")
@@ -60,6 +61,7 @@ Item {
             }
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
@@ -100,6 +102,7 @@ Item {
             }
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: qsTr("Liked songs")
                 color: Theme.text

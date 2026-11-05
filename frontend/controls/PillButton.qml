@@ -45,6 +45,7 @@ AbstractButton {
             }
 
             Label {
+                textFormat: Text.PlainText
                 anchors.verticalCenter: parent.verticalCenter
                 visible: root.text !== ""
                 text: root.text

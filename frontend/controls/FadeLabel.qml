@@ -21,6 +21,7 @@ Item {
 
     Label {
         id: label
+        textFormat: Text.PlainText
         width: parent.width
         text: root.shownText
         elide: Text.ElideRight

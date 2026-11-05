@@ -44,6 +44,7 @@ Item {
     }
 
     Label {
+        textFormat: Text.PlainText
         anchors.top: art.bottom
         anchors.topMargin: 6
         width: parent.width
@@ -56,6 +57,7 @@ Item {
     }
 
     Label {
+        textFormat: Text.PlainText
         anchors.top: art.bottom
         anchors.topMargin: 24
         width: parent.width

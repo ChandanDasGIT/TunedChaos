@@ -202,6 +202,7 @@ Rectangle {
                 }
 
                 Label {
+                    textFormat: Text.PlainText
                     text: root.source === "local" ? qsTr("Local library")
                         : root.source === "hosted" ? qsTr("Hosted library") : qsTr("Library")
                     color: Theme.text
@@ -210,6 +211,7 @@ Rectangle {
 
                 // Local: how many songs; hosted: which server
                 Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: root.source === "local" && LocalLibraryController.songCount > 0
                           ? Util.songCount(LocalLibraryController.songCount)
@@ -308,6 +310,7 @@ Rectangle {
 
         // Scan progress
         Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             Layout.leftMargin: Theme.padding
             Layout.rightMargin: Theme.padding
@@ -565,6 +568,7 @@ Rectangle {
                         spacing: 2
 
                         Label {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             text: LocalLibraryController.detailTitle
                             color: Theme.text
@@ -574,6 +578,7 @@ Rectangle {
                         }
 
                         Label {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             text: LocalLibraryController.detailSubtitle
                             color: Theme.textMuted
@@ -825,6 +830,7 @@ Rectangle {
                     }
 
                     Label {
+                        textFormat: Text.PlainText
                         anchors.centerIn: parent
                         width: parent.width - 4 * Theme.padding
                         visible: folderView.count === 0 && LocalLibraryController.subfolders.length === 0
@@ -863,6 +869,7 @@ Rectangle {
                 Item { width: 1; height: 4 }
 
                 Label {
+                    textFormat: Text.PlainText
                     width: parent.width
                     text: qsTr("Build your library")
                     color: Theme.text
@@ -872,6 +879,7 @@ Rectangle {
                 }
 
                 Label {
+                    textFormat: Text.PlainText
                     width: parent.width
                     text: qsTr("Choose the folders where your music is. Every song in them shows up here, sorted into albums, artists and folders.")
                     color: Theme.textMuted
@@ -895,6 +903,7 @@ Rectangle {
 
             // A search that found nothing
             Label {
+                textFormat: Text.PlainText
                 anchors.centerIn: parent
                 width: parent.width - 4 * Theme.padding
                 visible: LocalLibraryController.search !== "" && !root.inDetail
@@ -910,6 +919,7 @@ Rectangle {
 
             // Folders added, nothing found (yet)
             Label {
+                textFormat: Text.PlainText
                 anchors.centerIn: parent
                 width: parent.width - 4 * Theme.padding
                 visible: root.hasFolders && root.tab !== 4 && LocalLibraryController.songCount === 0
@@ -1096,6 +1106,7 @@ Rectangle {
 
             Label {
                 id: noteLabel
+                textFormat: Text.PlainText
                 width: parent.width
                 visible: entries.note !== ""
                 leftPadding: 8
@@ -1162,6 +1173,7 @@ Rectangle {
                         }
 
                         Label {
+                            textFormat: Text.PlainText
                             anchors.centerIn: parent
                             visible: !entries.albums
                             text: (artistRow.modelData.name || "").charAt(0).toUpperCase()
@@ -1175,6 +1187,7 @@ Rectangle {
                         Layout.fillWidth: true
 
                         Label {
+                            textFormat: Text.PlainText
                             width: parent.width
                             text: entries.albums ? artistRow.modelData.album : artistRow.modelData.name
                             color: Theme.text
@@ -1182,6 +1195,7 @@ Rectangle {
                             elide: Text.ElideRight
                         }
                         Label {
+                            textFormat: Text.PlainText
                             width: parent.width
                             visible: entries.albums
                             text: artistRow.modelData.artist || ""
@@ -1192,6 +1206,7 @@ Rectangle {
                     }
 
                     Label {
+                        textFormat: Text.PlainText
                         text: Util.songCount(artistRow.modelData.count)
                         color: Theme.textMuted
                         font.pixelSize: Theme.fontSizeSmall

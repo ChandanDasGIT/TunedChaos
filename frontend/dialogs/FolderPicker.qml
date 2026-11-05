@@ -133,6 +133,7 @@ Popup {
             }
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: root.title
                 color: Theme.text
@@ -176,6 +177,7 @@ Popup {
                 }
 
                 Label {
+                    textFormat: Text.PlainText
                     Layout.topMargin: Theme.spacing
                     Layout.leftMargin: 10
                     visible: root.drives.length > 0
@@ -218,6 +220,7 @@ Popup {
                     }
 
                     Label {
+                        textFormat: Text.PlainText
                         text: qsTr("Hidden")
                         color: Theme.textMuted
                         font.pixelSize: Theme.fontSizeSmall
@@ -304,6 +307,7 @@ Popup {
                                 height: crumbs.height
 
                                 Label {
+                                    textFormat: Text.PlainText
                                     // "/ home" needs no "›" after the root; "C: › Music" does
                                     visible: crumb.index > 1 || (crumb.index === 1 && crumbs.model[0].name !== "/")
                                     anchors.verticalCenter: parent.verticalCenter
@@ -313,6 +317,7 @@ Popup {
                                 }
 
                                 Label {
+                                    textFormat: Text.PlainText
                                     anchors.verticalCenter: parent.verticalCenter
                                     leftPadding: 6
                                     rightPadding: 6
@@ -416,6 +421,7 @@ Popup {
                             }
 
                             Label {
+                                textFormat: Text.PlainText
                                 Layout.fillWidth: true
                                 text: row.fileName
                                 color: Theme.text
@@ -434,6 +440,7 @@ Popup {
                     }
 
                     Label {
+                        textFormat: Text.PlainText
                         anchors.centerIn: parent
                         visible: folders.status === FolderListModel.Ready && folders.count === 0
                         text: root.fileFilters.length > 0 ? qsTr("No folders or playlist files in here")
@@ -453,6 +460,7 @@ Popup {
             spacing: Theme.spacing
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 visible: !root.saveMode
                 text: root.openFileMode ? qsTr("Click a playlist file to open it") : Files.displayPath(root.folder)
@@ -535,6 +543,7 @@ Popup {
             }
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: place.label
                 color: place.current ? Theme.accent : Theme.text

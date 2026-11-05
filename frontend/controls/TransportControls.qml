@@ -136,6 +136,7 @@ ColumnLayout {
                         Behavior on scale { NumberAnimation { duration: Theme.anim; easing.type: Theme.easingBack } }
 
                         Text {
+                            textFormat: Text.PlainText
                             anchors.centerIn: parent
                             text: "1"
                             color: Theme.background

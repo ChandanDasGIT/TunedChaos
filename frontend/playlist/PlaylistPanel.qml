@@ -167,6 +167,7 @@ Rectangle {
 
                             Label {
                                 id: playlistsLabel
+                                textFormat: Text.PlainText
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: Math.max(0, Math.min(implicitWidth, playlistsButton.width - playlistsButton.chrome)) // long names are cut with "…"
                                 text: playlistsButton.label
@@ -204,6 +205,7 @@ Rectangle {
 
                     Label {
                         id: summary
+                        textFormat: Text.PlainText
                         anchors.centerIn: parent
                         width: Math.min(implicitWidth, summaryChip.width - 16)
                         text: (root.shownCount === 1 ? qsTr("1 track") : qsTr("%1 tracks").arg(root.shownCount)) + "  ·  "
@@ -221,6 +223,7 @@ Rectangle {
 
                 // Clear playlist: needs a second click within 3 s.
                 Label {
+                    textFormat: Text.PlainText
                     visible: clearButton.confirming
                     text: qsTr("Clear all?")
                     color: Theme.error
@@ -563,6 +566,7 @@ Rectangle {
                 Item { width: 1; height: 4 }
 
                 Label {
+                    textFormat: Text.PlainText
                     width: parent.width
                     text: root.viewingQueue ? qsTr("Your queue is empty") : qsTr("This playlist is empty")
                     color: Theme.text
@@ -573,6 +577,7 @@ Rectangle {
                 }
 
                 Label {
+                    textFormat: Text.PlainText
                     width: parent.width
                     text: root.viewingQueue
                           ? qsTr("Drop a folder of music anywhere in the window. It's scanned and sorted for you, and starts playing.")

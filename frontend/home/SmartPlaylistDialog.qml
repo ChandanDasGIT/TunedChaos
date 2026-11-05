@@ -115,6 +115,7 @@ Popup {
         spacing: Theme.padding
 
         Label {
+            textFormat: Text.PlainText
             text: root.playlistId === "" ? qsTr("New smart playlist") : qsTr("Edit smart playlist")
             color: Theme.text
             font.pixelSize: Theme.fontSizeLarge
@@ -258,6 +259,7 @@ Popup {
             spacing: 6
 
             Label {
+                textFormat: Text.PlainText
                 height: 30
                 verticalAlignment: Text.AlignVCenter
                 text: qsTr("Order:")
@@ -270,6 +272,7 @@ Popup {
                 onPicked: (id) => root.order = id
             }
             Label {
+                textFormat: Text.PlainText
                 height: 30
                 leftPadding: Theme.spacing
                 verticalAlignment: Text.AlignVCenter
@@ -285,6 +288,7 @@ Popup {
                 validator: IntValidator { bottom: 0; top: 100000 }
             }
             Label {
+                textFormat: Text.PlainText
                 height: 30
                 verticalAlignment: Text.AlignVCenter
                 text: qsTr("songs")
@@ -311,6 +315,7 @@ Popup {
             }
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: root.count === 1 ? qsTr("1 song right now") : qsTr("%1 songs right now").arg(root.count)
                 color: Theme.textMuted

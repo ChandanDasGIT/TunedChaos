@@ -74,6 +74,7 @@ Rectangle {
             spacing: 1
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: root.name
                 color: Theme.text
@@ -83,6 +84,7 @@ Rectangle {
             }
 
             Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: root.location !== "" ? Util.songCount(root.count) + "  ·  " + root.location
                                            : Util.songCount(root.count)

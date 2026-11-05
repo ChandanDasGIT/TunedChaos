@@ -252,6 +252,7 @@ Rectangle {
             }
 
             Text {
+                textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: pill.bottom
                 anchors.topMargin: 3

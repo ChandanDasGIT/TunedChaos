@@ -151,6 +151,7 @@ Item {
                 Layout.rightMargin: Theme.padding
 
                 Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: qsTr("Recent searches")
                     color: Theme.textMuted
@@ -215,6 +216,7 @@ Item {
                         }
 
                         Label {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             text: recent.modelData
                             color: Theme.text
@@ -348,6 +350,7 @@ Item {
                 spacing: 2
 
                 Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: row.card.title
                     color: Theme.text
@@ -356,6 +359,7 @@ Item {
                     elide: Text.ElideRight
                 }
                 Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     visible: text !== ""
                     text: row.card.subtitle
