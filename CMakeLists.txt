@@ -105,6 +105,8 @@ add_library(backend STATIC
     backend/library/scanner/scanner.cpp
     backend/library/scanner/scanner.h
     backend/library/track/track.h
+    backend/backup/backuparchive/backuparchive.cpp
+    backend/backup/backuparchive/backuparchive.h
     backend/loudness/loudnessmeter/loudnessmeter.cpp
     backend/loudness/loudnessmeter/loudnessmeter.h
     backend/loudness/loudnessstore/loudnessstore.cpp
@@ -207,6 +209,8 @@ qt_add_executable(TunedChaos
     wrapper/update/appupdater.h
     wrapper/tray/trayicon.cpp
     wrapper/tray/trayicon.h
+    wrapper/backup/backupcontroller.cpp
+    wrapper/backup/backupcontroller.h
 )
 
 # The platform's parts (see CMP_PLATFORM above)

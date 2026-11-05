@@ -1180,6 +1180,13 @@ ApplicationWindow {
         parent: window.compact ? settingsPull.contentItem : window.slotFor("settings").settingsCard
         anchors.fill: parent
         onCloseRequested: window.closeSettings()
+        onBackupRequested: folderPicker.pick(qsTr("Back up to a file"), qsTr("Save"), "", (file) => Backup.backUp(file),
+                                             { save: true, files: ["*.tcbackup"], name: Backup.suggestedName() })
+        onRestoreRequested: folderPicker.pick(qsTr("Restore a backup"), "", "", (file) => {
+            window.restoreFile = file
+            restoreDialog.ask(qsTr("Restore this backup?"),
+                              qsTr("Your settings, playlists, Queue, history and library are replaced by the backup's, and the app restarts."))
+        }, { files: ["*.tcbackup"] })
         onClearHistoryRequested: clearHistoryDialog.ask(qsTr("Clear your listening history?"),
                                                         qsTr("Every song remembered so far is forgotten. Your music itself stays."))
         onAddFolderRequested: folderPicker.pick(qsTr("Add a music folder"), qsTr("Add this folder"), "",
@@ -1409,6 +1416,17 @@ ApplicationWindow {
             if (PlayerController.errorString !== "")
                 toast.show(PlayerController.errorString)
         }
+    }
+
+    property string restoreFile: ""
+    ConfirmDialog {
+        id: restoreDialog
+        confirmText: qsTr("Restore")
+        onConfirmed: Backup.restore(window.restoreFile)
+    }
+    Connections {
+        target: Backup
+        function onNotice(text) { toast.show(text) }
     }
 
     ConfirmDialog {

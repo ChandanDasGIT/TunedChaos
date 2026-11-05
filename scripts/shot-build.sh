@@ -8,7 +8,7 @@ mkdir -p build/shot
 python3 -I - <<'PY'
 import pathlib
 s = pathlib.Path("main.cpp").read_text()
-s = "#include \"backend/library/metadata/metadata.h\"\n#include <QDir>\n#include <QTest>\n#include <cstdio>\n#include <QQuickWindow>\n#include <QTimer>\n#include <QImage>\n#include <functional>\n#include <QMouseEvent>\n#include <QQuickItem>\n#include <QUrl>\n#include <QMimeData>\n#include <QDropEvent>\n#include <QWheelEvent>\n" + s
+s = "#include \"backend/library/metadata/metadata.h\"\n#include <QQmlContext>\n#include <QDir>\n#include <QTest>\n#include <cstdio>\n#include <QQuickWindow>\n#include <QTimer>\n#include <QImage>\n#include <functional>\n#include <QMouseEvent>\n#include <QQuickItem>\n#include <QUrl>\n#include <QMimeData>\n#include <QDropEvent>\n#include <QWheelEvent>\n" + s
 hook = '''    // ---- screenshot harness
     if (qEnvironmentVariableIsSet("SHOT_SIZE")) { // e.g. 400x780
         const QStringList wh = qEnvironmentVariable("SHOT_SIZE").split(QLatin1Char('x'));
@@ -442,6 +442,10 @@ hook = '''    // ---- screenshot harness
                     QTest::mouseMove(w, p);
                     QTest::qWait(100);
                     QTest::mouseClick(w, Qt::LeftButton, {}, p);
+                } else if (step.startsWith(QLatin1String("backup:")) || step.startsWith(QLatin1String("restore:"))) { // backup:/file, restore:/file
+                    QObject *backup = engine.rootContext()->contextProperty(QStringLiteral("Backup")).value<QObject *>();
+                    const bool save = step.startsWith(QLatin1String("backup:"));
+                    QMetaObject::invokeMethod(backup, save ? "backUp" : "restore", Q_ARG(QString, step.section(QLatin1Char(':'), 1)));
                 } else if (step.startsWith(QLatin1String("pin:")))
                     QMetaObject::invokeMethod(root, "togglePin", Q_ARG(QVariant, step.mid(4)));
                 else if (step.startsWith(QLatin1String("at:"))) { // press / release at x,y; print who grabbed it
@@ -965,9 +969,9 @@ PY
 OBJ=build/CMakeFiles/TunedChaos.dir
 objs=$(find $OBJ -name '*.o' ! -name 'main.cpp.o')
 version=$(sed -n 's/^project(TunedChaos VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
-g++ -std=c++20 -fPIC -I. -Ibuild/TunedChaos_autogen/include -DAPP_VERSION="\"$version\"" \
-  $(pkg-config --cflags Qt6Gui Qt6Qml Qt6Quick Qt6QuickControls2 Qt6DBus Qt6Network Qt6Test) \
+g++ -std=c++20 -fPIC -I. -Ibuild/TunedChaos_autogen/include -DAPP_VERSION="\"$version\"" -DCMP_TRAY \
+  $(pkg-config --cflags Qt6Gui Qt6Widgets Qt6Qml Qt6Quick Qt6QuickControls2 Qt6DBus Qt6Network Qt6Test) \
   build/shot/shotmain.cpp $objs build/qml/ChaoticStyle/libchaoticstyleplugin.a build/libchaoticstyle.a build/libbackend.a \
-  $(pkg-config --libs Qt6Quick Qt6Qml Qt6Gui Qt6DBus Qt6Network Qt6QuickControls2 Qt6Test taglib libavformat libavcodec libavutil libswresample libpipewire-0.3 libcurl icu-uc icu-i18n) \
+  $(pkg-config --libs Qt6Quick Qt6Qml Qt6Gui Qt6Widgets Qt6DBus Qt6Network Qt6QuickControls2 Qt6Test taglib libavformat libavcodec libavutil libswresample libpipewire-0.3 libcurl icu-uc icu-i18n) \
   -lpthread -o build/shot/shot
 echo "harness built"

@@ -30,7 +30,7 @@ Rectangle {
         { name: qsTr("Lyrics"), icon: "lyrics", hue: 0.13, summary: qsTr("Sources, synced lyrics, script") },
         { name: qsTr("YouTube Music"), icon: "cloud", hue: 0.0, summary: qsTr("Account, autoplay, audio quality") },
         { name: qsTr("Keyboard shortcuts"), icon: "keyboard", hue: 0.7, summary: qsTr("Every key the app knows") },
-        { name: qsTr("About"), icon: "info", hue: 0.5, summary: qsTr("Version and your data") },
+        { name: qsTr("About"), icon: "info", hue: 0.5, summary: qsTr("Version, your data, backup") },
         { name: qsTr("Layout Customisation"), icon: "layout", hue: 0.75,
           summary: android ? qsTr("Bottom bar, default panel")
                   : qsTr("Bottom bar, panel sides, what opens on start") },
@@ -69,6 +69,8 @@ Rectangle {
     // Ask Main for the folder picker (it lives in the main window).
     signal addFolderRequested()
     signal clearHistoryRequested() // asks first (the confirmation lives in the main window)
+    signal backupRequested()  // Main picks where (its file picker)
+    signal restoreRequested() // Main picks the file and asks first
     signal excludeFolderRequested(string startFolder)
 
     // Opens that page (-1: the list), e.g. the Library's music folders.
@@ -1522,6 +1524,34 @@ Rectangle {
                                         ToolTip.text: qsTr("Open the folder")
                                         onClicked: Qt.openUrlExternally(dataRow.folder)
                                     }
+                                }
+                            }
+                        }
+
+                        SettingsCard {
+                            title: qsTr("Backup")
+
+                            SettingsRow {
+                                Layout.fillWidth: true
+                                title: qsTr("Back up")
+                                description: qsTr("One file with your settings, playlists, Queue, history, moods, smart playlists, library and server sign-ins (keep it private). Covers and lyrics aren't in it: they come back by themselves.")
+
+                                PillButton {
+                                    text: qsTr("Back up…")
+                                    implicitHeight: 32
+                                    onClicked: root.backupRequested()
+                                }
+                            }
+
+                            SettingsRow {
+                                Layout.fillWidth: true
+                                title: qsTr("Restore")
+                                description: qsTr("Replaces your settings and data with a backup's, then restarts the app.")
+
+                                PillButton {
+                                    text: qsTr("Restore…")
+                                    implicitHeight: 32
+                                    onClicked: root.restoreRequested()
                                 }
                             }
                         }

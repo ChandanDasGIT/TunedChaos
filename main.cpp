@@ -1,6 +1,7 @@
 #include "wrapper/albumart/albumartprovider.h"
 #include "wrapper/albumart/covercontroller.h"
 #include "wrapper/albumart/coverpalette.h"
+#include "wrapper/backup/backupcontroller.h"
 #include "wrapper/files/files.h"
 #include "wrapper/history/historycontroller.h"
 #include "wrapper/library/librarycontroller.h"
@@ -81,6 +82,8 @@ int main(int argc, char *argv[])
 
     // The app's folders from before its rename move to the new names first
     Files::moveOldFolders();
+    // A backup being restored (Settings > About) goes in place before anything reads the folders
+    BackupController::applyPending();
 
     // Interface size (Settings > Appearance): Qt scales the whole UI by it. It
     // must be set before the app starts, so a change applies after a restart.
@@ -247,6 +250,8 @@ int main(int argc, char *argv[])
     engine.addImageProvider(QStringLiteral("albumart"), new AlbumArtProvider); // engine takes ownership
     engine.rootContext()->setContextProperty(QStringLiteral("AppUpdater"), &appUpdater);
     engine.rootContext()->setContextProperty(QStringLiteral("Tray"), &tray);
+    BackupController backup(&settings, nullptr);
+    engine.rootContext()->setContextProperty(QStringLiteral("Backup"), &backup);
     // Windows: the update installs once the app has closed, then starts it again
     QObject::connect(&appUpdater, &AppUpdater::quitRequested, &app, [&engine] {
         if (!engine.rootObjects().isEmpty())
