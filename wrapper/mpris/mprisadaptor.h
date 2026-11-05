@@ -143,4 +143,5 @@ private:
     QString m_artSource; // audio file the cached cover belongs to
     QString m_artFile;
     QString m_artUrl;
+    int m_artGeneration = 0; // bumped per track; stale cover downloads are dropped
 };

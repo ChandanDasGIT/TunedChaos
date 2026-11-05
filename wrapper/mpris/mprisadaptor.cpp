@@ -2,6 +2,7 @@
 
 #include "wrapper/files/files.h"
 #include "backend/library/metadata/metadata.h"
+#include "backend/network/httpclient/httpclient.h"
 #include "wrapper/player/playercontroller.h"
 #include "wrapper/playlist/playlistcontroller.h"
 
@@ -10,6 +11,8 @@
 #include <QDBusMessage>
 #include <QDir>
 #include <QFile>
+#include <QPointer>
+#include <QThreadPool>
 #include <QStandardPaths>
 #include <QUrl>
 
@@ -337,15 +340,38 @@ void MprisPlayerInterface::update()
     QDBusConnection::sessionBus().send(signal);
 }
 
+// Writes cover bytes to ~/.cache/TunedChaos/cover-<hash>.<ext>; returns the
+// file, or "" if there was nothing to write. Safe to call off the main thread.
+static QString writeCoverFile(const QString &source, const std::vector<unsigned char> &data)
+{
+    if (data.empty())
+        return {};
+    const bool png = data.size() > 4 && data[1] == 'P' && data[2] == 'N' && data[3] == 'G';
+    const QString dir = Files::cacheDir();
+    QDir().mkpath(dir);
+    const QString file = dir + QStringLiteral("/cover-%1.%2")
+                                   .arg(qHash(source), 0, 16)
+                                   .arg(png ? QStringLiteral("png") : QStringLiteral("jpg"));
+    QFile out(file);
+    if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate)
+        || out.write(reinterpret_cast<const char *>(data.data()), qint64(data.size())) <= 0)
+        return {};
+    return file;
+}
+
 // MPRIS wants an image URL, so the current cover is written to
 // ~/.cache/TunedChaos/. Each track gets its own file name so clients
 // that cache by URL refresh; the previous file is removed.
+// Remote covers are downloaded too, never published as web addresses:
+// a Jellyfin cover address carries the account's token, and anything
+// on the session bus can read MPRIS metadata.
 void MprisPlayerInterface::updateArt()
 {
     const QString source = m_player->source();
     if (source == m_artSource)
         return;
     m_artSource = source;
+    const int generation = ++m_artGeneration;
 
     if (!m_artFile.isEmpty())
         QFile::remove(m_artFile);
@@ -354,27 +380,33 @@ void MprisPlayerInterface::updateArt()
     if (source.isEmpty())
         return;
 
-    // YouTube tracks: the thumbnail is already a URL.
-    if (const Track *track = m_playlist->trackForPath(source); track && !track->thumbnailUrl.empty()) {
-        m_artUrl = QString::fromStdString(track->thumbnailUrl);
+    const Track *track = m_playlist->trackForPath(source);
+    const QString thumbnail = track ? QString::fromStdString(track->thumbnailUrl) : QString();
+    if (thumbnail.isEmpty()) {
+        m_artFile = writeCoverFile(source, Metadata::readCover(source.toStdString()));
+        if (!m_artFile.isEmpty())
+            m_artUrl = QUrl::fromLocalFile(m_artFile).toString();
         return;
     }
 
-    const std::vector<unsigned char> data = Metadata::readCover(source.toStdString());
-    if (data.empty())
-        return;
-
-    const bool png = data.size() > 4 && data[1] == 'P' && data[2] == 'N' && data[3] == 'G';
-    const QString dir = Files::cacheDir();
-    QDir().mkpath(dir);
-    const QString file = dir + QStringLiteral("/cover-%1.%2")
-                                   .arg(qHash(source), 0, 16)
-                                   .arg(png ? QStringLiteral("png") : QStringLiteral("jpg"));
-
-    QFile out(file);
-    if (!out.open(QIODevice::WriteOnly))
-        return;
-    out.write(reinterpret_cast<const char *>(data.data()), qint64(data.size()));
-    m_artFile = file;
-    m_artUrl = QUrl::fromLocalFile(file).toString();
+    QPointer<MprisPlayerInterface> self(this);
+    QThreadPool::globalInstance()->start([self, source, thumbnail, generation] {
+        std::vector<unsigned char> data;
+        const HttpResponse response = HttpClient::get(thumbnail.toStdString(), {}, 15000);
+        if (response.ok())
+            data.assign(response.body.begin(), response.body.end());
+        const QString file = writeCoverFile(source, data);
+        QMetaObject::invokeMethod(qApp, [self, file, generation] {
+            if (!self || generation != self->m_artGeneration) {
+                if (!file.isEmpty())
+                    QFile::remove(file); // the track changed meanwhile
+                return;
+            }
+            if (file.isEmpty())
+                return;
+            self->m_artFile = file;
+            self->m_artUrl = QUrl::fromLocalFile(file).toString();
+            self->scheduleUpdate();
+        }, Qt::QueuedConnection);
+    });
 }
