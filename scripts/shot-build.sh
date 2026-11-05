@@ -8,7 +8,7 @@ mkdir -p build/shot
 python3 -I - <<'PY'
 import pathlib
 s = pathlib.Path("main.cpp").read_text()
-s = "#include \"backend/library/metadata/metadata.h\"\n#include <QQmlContext>\n#include <QQmlExpression>\n#include <QDir>\n#include <QTest>\n#include <cstdio>\n#include <QQuickWindow>\n#include <QTimer>\n#include <QImage>\n#include <functional>\n#include <QMouseEvent>\n#include <QQuickItem>\n#include <QUrl>\n#include <QMimeData>\n#include <QDropEvent>\n#include <QWheelEvent>\n" + s
+s = "#include \"backend/library/metadata/metadata.h\"\n#include <QQmlContext>\n#include <QQmlExpression>\n#include <QDir>\n#include <QTest>\n#include <cstdio>\n#include <QQuickWindow>\n#include <QTimer>\n#include <QImage>\n#include <functional>\n#include <QMouseEvent>\n#include <QQuickItem>\n#include <QUrl>\n#include <QMimeData>\n#include <QDropEvent>\n#include <QWheelEvent>\n#include <QElapsedTimer>\n#include <mutex>\n#include <algorithm>\n" + s
 hook = '''    // ---- screenshot harness
     if (qEnvironmentVariableIsSet("SHOT_SIZE")) { // e.g. 400x780
         const QStringList wh = qEnvironmentVariable("SHOT_SIZE").split(QLatin1Char('x'));
@@ -239,6 +239,95 @@ hook = '''    // ---- screenshot harness
     }
     if (qEnvironmentVariableIsSet("SHOT_SCREEN_W")) // pretend the screen is this wide (picks the layout)
         engine.rootObjects().constFirst()->setProperty("screenWidthOverride", qEnvironmentVariableIntValue("SHOT_SCREEN_W"));
+    if (qEnvironmentVariableIsSet("SHOT_FRAMES")) { // per SHOT_OPEN step: frame count, and the GUI work (animations -> layout -> sync) per frame
+        auto *fw = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst());
+        static QElapsedTimer clock;
+        static qint64 frameStart = -1;
+        static QList<QPair<qint64, qint64>> frames; // (when, how long the GUI thread worked on it), µs
+        clock.start();
+        QObject::connect(fw, &QQuickWindow::afterAnimating, fw, [] { frameStart = clock.nsecsElapsed() / 1000; }, Qt::DirectConnection);
+        QObject::connect(fw, &QQuickWindow::afterSynchronizing, fw, [] {
+            if (frameStart >= 0)
+                frames.append({frameStart, clock.nsecsElapsed() / 1000 - frameStart});
+            frameStart = -1;
+        }, Qt::DirectConnection);
+        static std::mutex renderLock;
+        static qint64 renderStart = -1;
+        static QList<QPair<qint64, qint64>> renders; // (when, render thread time), µs
+        QObject::connect(fw, &QQuickWindow::beforeRendering, fw, [] { renderStart = clock.nsecsElapsed() / 1000; }, Qt::DirectConnection);
+        QObject::connect(fw, &QQuickWindow::frameSwapped, fw, [] {
+            const qint64 now = clock.nsecsElapsed() / 1000;
+            std::lock_guard<std::mutex> lock(renderLock);
+            if (renderStart >= 0)
+                renders.append({renderStart, now - renderStart});
+            renderStart = -1;
+        }, Qt::DirectConnection);
+        QTimer *report = new QTimer(fw);
+        QObject::connect(report, &QTimer::timeout, fw, [] {
+            static qint64 from = 0;
+            const qint64 to = clock.nsecsElapsed() / 1000;
+            QList<qint64> work;
+            qint64 longestGap = 0, last = -1;
+            for (const auto &f : frames)
+                if (f.first >= from && f.first < to) {
+                    work.append(f.second);
+                    if (last >= 0)
+                        longestGap = std::max(longestGap, f.first - last);
+                    last = f.first;
+                }
+            std::sort(work.begin(), work.end());
+            if (!work.isEmpty())
+                std::printf("frames %lld..%lldms: %lld frames, GUI work median %.1fms p90 %.1fms max %.1fms, longest gap %.1fms\\n",
+                            from / 1000, to / 1000, qint64(work.size()), work[work.size() / 2] / 1000.0,
+                            work[work.size() * 9 / 10] / 1000.0, work.last() / 1000.0, longestGap / 1000.0);
+            {
+                std::lock_guard<std::mutex> lock(renderLock);
+                QList<qint64> r, gaps;
+                qint64 gap = 0, prev = -1;
+                for (const auto &f : renders)
+                    if (f.first >= from && f.first < to) {
+                        r.append(f.second);
+                        if (prev >= 0 && f.first - prev < 100000) // during an animation (not idle)
+                            gaps.append(f.first - prev);
+                        if (prev >= 0)
+                            gap = std::max(gap, f.first - prev);
+                        prev = f.first;
+                    }
+                std::sort(r.begin(), r.end());
+                if (!r.isEmpty())
+                    std::printf("  render: %lld frames, median %.1fms p90 %.1fms max %.1fms, longest gap %.1fms\\n", qint64(r.size()),
+                                r[r.size() / 2] / 1000.0, r[r.size() * 9 / 10] / 1000.0, r.last() / 1000.0, gap / 1000.0);
+                std::sort(gaps.begin(), gaps.end());
+                if (!gaps.isEmpty())
+                    std::printf("  frame gap median %.1fms (%.0f fps)\\n", gaps[gaps.size() / 2] / 1000.0, 1e6 / std::max<qint64>(1, gaps[gaps.size() / 2]));
+            }
+            std::fflush(stdout);
+            from = to;
+        });
+        QTimer::singleShot(2000 + qEnvironmentVariableIntValue("SHOT_FRAMES_OFFSET"), report, [report] { report->start(1300); });
+    }
+    if (qEnvironmentVariableIsSet("SHOT_TRACE")) { // every frame: scene x / width of these types (comma-separated), from the GUI thread
+        auto *tw = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst());
+        const QStringList types = qEnvironmentVariable("SHOT_TRACE").split(QLatin1Char(','));
+        static QElapsedTimer traceClock;
+        traceClock.start();
+        QObject::connect(tw, &QQuickWindow::beforeSynchronizing, tw, [tw, types] {
+            if (traceClock.elapsed() < 1900)
+                return;
+            QString line = QString::number(traceClock.elapsed());
+            std::function<void(QQuickItem *)> walk = [&](QQuickItem *item) {
+                const QString name = QString::fromLatin1(item->metaObject()->className()).section(QLatin1Char('_'), 0, 0);
+                if (types.contains(name) && item->isVisible() && item->width() > 0) {
+                    const QPointF at = item->mapToScene({0, 0});
+                    line += QStringLiteral(" %1@%2+%3").arg(name).arg(at.x(), 0, 'f', 2).arg(item->width(), 0, 'f', 2);
+                }
+                for (QQuickItem *child : item->childItems())
+                    walk(child);
+            };
+            walk(tw->contentItem());
+            std::printf("T %s\\n", qPrintable(line));
+        }, Qt::DirectConnection);
+    }
     if (qEnvironmentVariableIsSet("SHOT_OPEN")) { // steps in turn: queue / youtube / library (toggle), pin:<name>, player (mini tap)
         const QStringList steps = qEnvironmentVariable("SHOT_OPEN").split(QLatin1Char(' '), Qt::SkipEmptyParts);
         const auto columns = [&, findItems](const QString &label) {
