@@ -76,12 +76,12 @@ public class OpenedFiles {
 
     private static String pathFor(Context context, Uri uri) {
         if ("file".equals(uri.getScheme()))
-            return uri.getPath();
+            return isPrivate(context, uri.getPath()) ? null : uri.getPath();
         // The song's own file, if Android says where it is and the app may read it
         try (Cursor cursor = context.getContentResolver().query(uri, new String[] {"_data"}, null, null, null)) {
             if (cursor != null && cursor.moveToFirst()) {
                 String path = cursor.getString(0);
-                if (path != null && new File(path).canRead())
+                if (path != null && new File(path).canRead() && !isPrivate(context, path))
                     return path;
             }
         } catch (Exception ignored) {
@@ -100,6 +100,17 @@ public class OpenedFiles {
         } catch (Exception ignored) {
         }
         return copyToCache(context, uri);
+    }
+
+    // Inside the app's own data (its settings, server sign-ins...): another app
+    // could name such a path, so it's never opened as a song
+    private static boolean isPrivate(Context context, String path) {
+        try {
+            String data = new File(context.getApplicationInfo().dataDir).getCanonicalPath() + File.separator;
+            return new File(path).getCanonicalPath().startsWith(data);
+        } catch (Exception e) {
+            return true; // (can't tell: not opened)
+        }
     }
 
     // Anything else: a copy the player can read (cache: Android may clear it)

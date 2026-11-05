@@ -15,6 +15,19 @@
 
 namespace {
 
+// Addresses come from servers (covers, lyrics, streams): only ever web ones,
+// also after a redirect (never file://, ftp://, ...)
+void webOnly(CURL *handle)
+{
+#if LIBCURL_VERSION_NUM >= 0x075500 // 7.85
+    curl_easy_setopt(handle, CURLOPT_PROTOCOLS_STR, "http,https");
+    curl_easy_setopt(handle, CURLOPT_REDIR_PROTOCOLS_STR, "http,https");
+#else
+    curl_easy_setopt(handle, CURLOPT_PROTOCOLS, long(CURLPROTO_HTTP | CURLPROTO_HTTPS));
+    curl_easy_setopt(handle, CURLOPT_REDIR_PROTOCOLS, long(CURLPROTO_HTTP | CURLPROTO_HTTPS));
+#endif
+}
+
 #ifdef __ANDROID__
 // Android's trusted certificates, as one PEM text (read once). The bundled
 // OpenSSL can't use Android's certificate folder directly: its files are named
@@ -73,6 +86,7 @@ HttpResponse perform(const std::string &url, const std::string *postBody,
     curl_easy_setopt(handle, CURLOPT_URL, url.c_str());
     curl_easy_setopt(handle, CURLOPT_USERAGENT, HttpClient::userAgent());
     curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, 1L);
+    webOnly(handle);
     curl_easy_setopt(handle, CURLOPT_ACCEPT_ENCODING, ""); // any compression curl supports
     curl_easy_setopt(handle, CURLOPT_TIMEOUT_MS, timeoutMs);
     curl_easy_setopt(handle, CURLOPT_CONNECTTIMEOUT_MS, std::min(timeoutMs, 5000L));
@@ -194,6 +208,7 @@ HttpResponse HttpClient::download(const std::string &url, const std::string &pat
     curl_easy_setopt(handle, CURLOPT_URL, url.c_str());
     curl_easy_setopt(handle, CURLOPT_USERAGENT, userAgent());
     curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, 1L);
+    webOnly(handle);
     curl_easy_setopt(handle, CURLOPT_FAILONERROR, 1L); // (an error page must not end up in the file)
     curl_easy_setopt(handle, CURLOPT_RESUME_FROM_LARGE, curl_off_t(download.size));
     curl_easy_setopt(handle, CURLOPT_CONNECTTIMEOUT_MS, 15000L);

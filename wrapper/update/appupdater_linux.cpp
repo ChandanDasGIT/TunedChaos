@@ -18,14 +18,16 @@ namespace {
 
 enum class Kind { None, AppImage, Tarball };
 
-// How this copy was installed. (TUNEDCHAOS_UPDATE_KIND pretends, for tests.)
+// How this copy was installed. (Debug builds: TUNEDCHAOS_UPDATE_KIND pretends, for tests.)
 Kind kind()
 {
+#ifndef NDEBUG
     const QString forced = qEnvironmentVariable("TUNEDCHAOS_UPDATE_KIND");
     if (forced == QLatin1String("appimage"))
         return Kind::AppImage;
     if (forced == QLatin1String("tarball"))
         return Kind::Tarball;
+#endif
     if (qEnvironmentVariableIsSet("FLATPAK_ID"))
         return Kind::None; // Flatpak updates itself (Flathub, or a new bundle)
     const QString appImage = qEnvironmentVariable("APPIMAGE");
