@@ -342,7 +342,7 @@ Item {
                     readonly property int songIndex: root.inFolders ? index - (list.count - root.folderSongCount) : index
 
                     width: parent.width
-                    thumbnail: modelData.thumbnail || ""
+                    thumbnail: modelData.kind === "folder" && !SettingsController.folderCovers ? "" : modelData.thumbnail || ""
                     icon: modelData.kind === "folder" ? "folder" : song ? "music" : "compactDisc"
                     title: song ? modelData.title : modelData.name
                     subtitle: song ? [modelData.artist, modelData.album].filter(s => s).join("  ·  ") : modelData.subtitle
@@ -395,7 +395,7 @@ Item {
                                                                     : modelData
                     readonly property int songList: root.inFolders ? HostedController.FolderList : HostedController.SongsList
 
-                    image: item.thumbnail || ""
+                    image: item.kind === "folder" && !SettingsController.folderCovers ? "" : item.thumbnail || ""
                     icon: item.kind === "folder" ? "folder" : song ? "music"
                         : root.tab === HostedController.ArtistsTab ? "user"
                         : root.tab === HostedController.PlaylistsTab ? "listMusic" : "compactDisc"

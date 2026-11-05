@@ -755,7 +755,7 @@ Rectangle {
                                 LibraryTile {
                                     readonly property var folder: LocalLibraryController.subfolders[folderCell.modelData] ?? ({})
                                     icon: "folder"
-                                    image: folder.coverPath ? Util.coverSource(folder.coverPath, "") : ""
+                                    image: SettingsController.folderCovers && folder.coverPath ? Util.coverSource(folder.coverPath, "") : ""
                                     title: folder.name || ""
                                     subtitle: folder.location || Util.songCount(folder.count || 0)
                                     onTapped: {
@@ -807,7 +807,7 @@ Rectangle {
                                 name: modelData.name
                                 path: modelData.path
                                 count: modelData.count
-                                coverPath: modelData.coverPath || ""
+                                coverPath: SettingsController.folderCovers ? modelData.coverPath || "" : ""
                                 location: modelData.location || ""
                                 onOpened: {
                                     LocalLibraryController.openFolder(path)

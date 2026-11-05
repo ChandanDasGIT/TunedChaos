@@ -72,6 +72,7 @@ constexpr const char *AppUpdateSkippedKey = "updates.skippedVersion";
 constexpr const char *YtQueueMixKey = "youtube.queueMix";
 constexpr const char *ListsToQueueKey = "playback.listsToQueue";
 constexpr const char *LetterGroupsKey = "library.letterGroups";
+constexpr const char *FolderCoversKey = "library.folderCovers";
 constexpr const char *LibrarySourceKey = "library.source";
 constexpr const char *HostedSortKey = "hosted.sort"; // + ".<tab>"
 constexpr const char *YtSearchHistoryKey = "youtube.searchHistory";
@@ -1009,6 +1010,20 @@ void SettingsController::setHostedSort(int tab, const QString &sort)
     m_settings->setValue(std::string(HostedSortKey) + '.' + std::to_string(tab), sort.toStdString());
     scheduleSave();
     emit hostedSortsChanged();
+}
+
+bool SettingsController::folderCovers() const
+{
+    return m_settings->boolValue(FolderCoversKey, false);
+}
+
+void SettingsController::setFolderCovers(bool enabled)
+{
+    if (enabled == folderCovers())
+        return;
+    m_settings->setBool(FolderCoversKey, enabled);
+    scheduleSave();
+    emit folderCoversChanged();
 }
 
 bool SettingsController::letterGroups() const

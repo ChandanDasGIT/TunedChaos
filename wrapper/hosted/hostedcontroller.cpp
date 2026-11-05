@@ -73,6 +73,11 @@ HostedController::HostedController(PlayerController *player, PlaylistController 
             m_reportPosition = m_player->position();
     });
 
+    // Folder covers turned on: found for the folder showing now
+    connect(m_settings, &SettingsController::folderCoversChanged, this, [this] {
+        if (m_settings->folderCovers() && m_loaded[FoldersTab])
+            findFolderCovers(m_folderRequest);
+    });
     connect(m_settings, &SettingsController::letterGroupsChanged, this, &HostedController::letterTabsChanged);
     connect(m_settings, &SettingsController::hostedSortsChanged, this, &HostedController::letterTabsChanged);
     // A tab sorted differently: loaded again (the server sorts), shown ones at once
@@ -483,7 +488,7 @@ void HostedController::loadFolder()
 void HostedController::findFolderCovers(int request)
 {
     const std::optional<HostedAccount> account = m_store->account(m_accountId.toStdString());
-    if (!account)
+    if (!account || !m_settings->folderCovers()) // (off: no lookups at all)
         return;
     std::vector<std::string> ids;
     for (const QVariant &entry : std::as_const(m_folderEntries)) {

@@ -115,6 +115,8 @@ class SettingsController : public QObject
     Q_PROPERTY(QVariantMap libraryViews READ libraryViews NOTIFY libraryViewsChanged)
     // Library lists sorted by name get letter headers (# A..Z), tap one to jump to a letter
     Q_PROPERTY(bool letterGroups READ letterGroups WRITE setLetterGroups NOTIFY letterGroupsChanged)
+    // Folders show a cover from the songs in them (off: the folder icon)
+    Q_PROPERTY(bool folderCovers READ folderCovers WRITE setFolderCovers NOTIFY folderCoversChanged)
     // Albums: "name", "nameDesc", "newest", "oldest", "modifiedNew", "modifiedOld", "artist" or "mostSongs"
     Q_PROPERTY(QString albumSort READ albumSort WRITE setAlbumSort NOTIFY librarySortChanged)
     // Artists: "name", "nameDesc", "mostSongs" or "fewestSongs"
@@ -268,6 +270,8 @@ public:
     Q_INVOKABLE void setHostedSort(int tab, const QString &sort);
     bool letterGroups() const;
     void setLetterGroups(bool enabled);
+    bool folderCovers() const;
+    void setFolderCovers(bool enabled);
     void setLibrarySort(const QString &sort);
     QString albumSort() const;
     void setAlbumSort(const QString &sort);
@@ -351,6 +355,7 @@ signals:
     void libraryExcludedChanged();
     void librarySortChanged();
     void letterGroupsChanged();
+    void folderCoversChanged();
     void librarySourceChanged();
     void hostedSortsChanged();
     void libraryViewsChanged();

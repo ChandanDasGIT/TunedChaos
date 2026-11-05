@@ -948,6 +948,17 @@ Rectangle {
                                     onToggled: SettingsController.letterGroups = checked
                                 }
                             }
+
+                            SettingsRow {
+                                Layout.fillWidth: true
+                                title: qsTr("Covers on folders")
+                                description: qsTr("A folder shows the album art of a song in it instead of the folder icon, in both libraries. For a server's folders the pictures are looked up when you open them.")
+
+                                SettingsSwitch {
+                                    checked: SettingsController.folderCovers
+                                    onToggled: SettingsController.folderCovers = checked
+                                }
+                            }
                         }
 
                         SettingsCard {
