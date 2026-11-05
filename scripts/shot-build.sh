@@ -424,6 +424,24 @@ hook = '''    // ---- screenshot harness
                                         std::printf("  grabber: none\\n");
                                     QTest::mouseRelease(w, Qt::LeftButton, {}, p);
                                 }
+                } else if (step.startsWith(QLatin1String("drag:"))) { // drag:x1,y1,x2,y2 — press, move in steps, release
+                    auto *w = qobject_cast<QQuickWindow *>(root);
+                    const QStringList v = step.mid(5).split(QLatin1Char(','));
+                    const QPoint a(v.value(0).toInt(), v.value(1).toInt()), b(v.value(2).toInt(), v.value(3).toInt());
+                    QTest::mouseMove(w, a);
+                    QTest::qWait(150);
+                    QTest::mousePress(w, Qt::LeftButton, {}, a);
+                    for (int k = 1; k <= 12; ++k) {
+                        QTest::mouseMove(w, a + (b - a) * k / 12);
+                        QTest::qWait(30);
+                    }
+                    QTest::mouseRelease(w, Qt::LeftButton, {}, b);
+                } else if (step.startsWith(QLatin1String("tap:"))) { // tap:x,y — a plain left click
+                    auto *w = qobject_cast<QQuickWindow *>(root);
+                    const QPoint p(step.mid(4).section(QLatin1Char(','), 0, 0).toInt(), step.mid(4).section(QLatin1Char(','), 1, 1).toInt());
+                    QTest::mouseMove(w, p);
+                    QTest::qWait(100);
+                    QTest::mouseClick(w, Qt::LeftButton, {}, p);
                 } else if (step.startsWith(QLatin1String("pin:")))
                     QMetaObject::invokeMethod(root, "togglePin", Q_ARG(QVariant, step.mid(4)));
                 else if (step.startsWith(QLatin1String("at:"))) { // press / release at x,y; print who grabbed it

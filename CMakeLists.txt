@@ -362,6 +362,7 @@ qt_add_qml_module(TunedChaos
         frontend/nowplaying/QualityChip.qml
         frontend/nowplaying/Visualizer.qml
         frontend/playlist/PlaylistContextMenu.qml
+        frontend/settingsdialog/ReorderList.qml
         frontend/settingsdialog/SettingsPanel.qml
         frontend/settingsdialog/SettingsRow.qml
         frontend/settingsdialog/SettingsSwitch.qml

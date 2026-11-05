@@ -33,7 +33,7 @@ Rectangle {
         { name: qsTr("About"), icon: "info", hue: 0.5, summary: qsTr("Version and your data") },
         { name: qsTr("Layout Customisation"), icon: "layout", hue: 0.75,
           summary: android ? qsTr("Bottom bar, default panel")
-                  : qsTr("Bottom bar, what opens on start") },
+                  : qsTr("Bottom bar, panel sides, what opens on start") },
         { name: qsTr("Seekbar"), icon: "wave", hue: 0.3, summary: qsTr("Animation and thumb style") },
         { name: qsTr("Sleep timer"), icon: "moon", hue: 0.68, summary: qsTr("Pause the music after a while") }
     ]
@@ -48,7 +48,7 @@ Rectangle {
 
     // Layout Customisation
     readonly property var panelNames: ({ youtube: qsTr("YouTube"), queue: qsTr("Queue"), home: qsTr("Home"),
-                                         library: qsTr("Library"), player: qsTr("Player") })
+                                         library: qsTr("Library"), player: qsTr("Player"), settings: qsTr("Settings") })
     readonly property var startChoices: ["player"].concat(SettingsController.panelOrder.filter(
         (panel) => !android || !SettingsController.hiddenPanels.includes(panel)))
     readonly property string startShown: startChoices.includes(SettingsController.startPanel)
@@ -1169,67 +1169,40 @@ Rectangle {
 
                             SettingsRow {
                                 Layout.fillWidth: true
-                                description: qsTr("Tried from top to bottom until one has lyrics. Switch off the ones you don't want.")
+                                description: qsTr("Tried from top to bottom until one has lyrics. Drag a source by its handle to change the order; switch off the ones you don't want.")
                             }
 
-                            Repeater {
+                            ReorderList {
+                                Layout.fillWidth: true
                                 model: SettingsController.lyricsSources
+                                onMoved: (from, to) => SettingsController.moveLyricsSource(from, to - from)
 
-                                delegate: Rectangle {
+                                rowContent: RowLayout {
                                     id: sourceRow
 
-                                    required property var modelData
-                                    required property int index
+                                    property var modelData
+                                    property int index
 
-                                    Layout.fillWidth: true
-                                    implicitHeight: 44
-                                    radius: Theme.radius
-                                    color: Theme.fillSoft
+                                    spacing: Theme.spacing
 
-                                    RowLayout {
-                                        anchors.fill: parent
-                                        anchors.leftMargin: Theme.padding
-                                        anchors.rightMargin: Theme.spacing
-                                        spacing: Theme.spacing
+                                    Label {
+                                        text: (sourceRow.index + 1) + "."
+                                        color: Theme.textMuted
+                                        font.pixelSize: Theme.fontSize
+                                    }
 
-                                        Label {
-                                            text: (sourceRow.index + 1) + "."
-                                            color: Theme.textMuted
-                                            font.pixelSize: Theme.fontSize
-                                        }
+                                    Label {
+                                        Layout.fillWidth: true
+                                        text: sourceRow.modelData ? sourceRow.modelData.name : ""
+                                        color: sourceRow.modelData && sourceRow.modelData.enabled ? Theme.text : Theme.textMuted
+                                        font.pixelSize: Theme.fontSize
+                                        elide: Text.ElideRight
+                                    }
 
-                                        Label {
-                                            Layout.fillWidth: true
-                                            text: sourceRow.modelData.name
-                                            color: sourceRow.modelData.enabled ? Theme.text : Theme.textMuted
-                                            font.pixelSize: Theme.fontSize
-                                            elide: Text.ElideRight
-                                        }
-
-                                        PillButton {
-                                            iconName: "arrowUp"
-                                            iconSize: 11
-                                            implicitWidth: 32
-                                            implicitHeight: 28
-                                            transparentIdle: true
-                                            enabled: sourceRow.index > 0
-                                            onClicked: SettingsController.moveLyricsSource(sourceRow.index, -1)
-                                        }
-
-                                        PillButton {
-                                            iconName: "arrowDown"
-                                            iconSize: 11
-                                            implicitWidth: 32
-                                            implicitHeight: 28
-                                            transparentIdle: true
-                                            enabled: sourceRow.index < SettingsController.lyricsSources.length - 1
-                                            onClicked: SettingsController.moveLyricsSource(sourceRow.index, 1)
-                                        }
-
-                                        SettingsSwitch {
-                                            checked: sourceRow.modelData.enabled
-                                            onToggled: SettingsController.setLyricsSourceEnabled(sourceRow.index, checked)
-                                        }
+                                    SettingsSwitch {
+                                        Layout.rightMargin: Theme.spacing
+                                        checked: sourceRow.modelData ? sourceRow.modelData.enabled : false
+                                        onToggled: SettingsController.setLyricsSourceEnabled(sourceRow.index, checked)
                                     }
                                 }
                             }
@@ -1557,65 +1530,62 @@ Rectangle {
                             }
 
                             SettingsRow {
-                                readonly property bool hiddenHere: !root.android
-                                visible: !hiddenHere // (phones only)
                                 Layout.fillWidth: true
                                 title: qsTr("Panels")
-                                description: qsTr("Choose which panels you can open and their order. A panel turned off can't be opened; your music and its settings stay. Settings is always there.")
+                                description: root.android
+                                    ? qsTr("Choose which panels you can open, and drag them by the handle to set their order. A panel turned off can't be opened; your music and its settings stay. Settings is always there.")
+                                    : qsTr("Drag a panel by its handle to set its place in the bottom bar, and choose the side of the player it opens on. Settings stays last in the bar.")
                             }
 
-                            Repeater {
-                                model: root.android ? SettingsController.panelOrder : []
+                            ReorderList {
+                                Layout.fillWidth: true
+                                model: root.android ? SettingsController.panelOrder
+                                                    : SettingsController.panelOrder.concat(["settings"])
+                                fixedFrom: root.android ? -1 : SettingsController.panelOrder.length
+                                onMoved: (from, to) => SettingsController.movePanel(from, to - from)
 
-                                delegate: Rectangle {
+                                rowContent: RowLayout {
                                     id: panelRow
 
-                                    required property string modelData
-                                    required property int index
+                                    property var modelData
+                                    property int index
                                     readonly property bool shownInBar: !SettingsController.hiddenPanels.includes(modelData)
 
-                                    Layout.fillWidth: true
-                                    implicitHeight: 44
-                                    radius: Theme.radius
-                                    color: Theme.fillSoft
+                                    spacing: Theme.spacing
 
-                                    RowLayout {
-                                        anchors.fill: parent
-                                        anchors.leftMargin: Theme.padding
-                                        anchors.rightMargin: Theme.spacing
-                                        spacing: Theme.spacing
+                                    Label {
+                                        Layout.fillWidth: true
+                                        text: root.panelNames[panelRow.modelData] ?? ""
+                                        color: panelRow.shownInBar ? Theme.text : Theme.textMuted
+                                        font.pixelSize: Theme.fontSize
+                                        elide: Text.ElideRight
+                                    }
 
-                                        Label {
-                                            Layout.fillWidth: true
-                                            text: root.panelNames[panelRow.modelData]
-                                            color: panelRow.shownInBar ? Theme.text : Theme.textMuted
-                                            font.pixelSize: Theme.fontSize
-                                            elide: Text.ElideRight
-                                        }
+                                    SettingsSwitch {
+                                        visible: root.android
+                                        Layout.rightMargin: Theme.spacing
+                                        checked: panelRow.shownInBar
+                                        onToggled: SettingsController.setPanelHidden(panelRow.modelData, !checked)
+                                    }
 
-                                        PillButton {
-                                            iconName: "arrowUp"
-                                            iconSize: 11
-                                            implicitWidth: 32
-                                            implicitHeight: 28
-                                            transparentIdle: true
-                                            enabled: panelRow.index > 0
-                                            onClicked: SettingsController.movePanel(panelRow.index, -1)
-                                        }
+                                    // Desktop: the column it opens in
+                                    Row {
+                                        readonly property bool onLeft: SettingsController.leftPanels.includes(panelRow.modelData)
+                                        visible: !root.android
+                                        Layout.rightMargin: 6
+                                        spacing: 4
 
                                         PillButton {
-                                            iconName: "arrowDown"
-                                            iconSize: 11
-                                            implicitWidth: 32
-                                            implicitHeight: 28
-                                            transparentIdle: true
-                                            enabled: panelRow.index < SettingsController.panelOrder.length - 1
-                                            onClicked: SettingsController.movePanel(panelRow.index, 1)
+                                            text: qsTr("Left")
+                                            implicitHeight: 30
+                                            active: parent.onLeft
+                                            onClicked: SettingsController.setPanelLeft(panelRow.modelData, true)
                                         }
-
-                                        SettingsSwitch {
-                                            checked: panelRow.shownInBar
-                                            onToggled: SettingsController.setPanelHidden(panelRow.modelData, !checked)
+                                        PillButton {
+                                            text: qsTr("Right")
+                                            implicitHeight: 30
+                                            active: !parent.onLeft
+                                            onClicked: SettingsController.setPanelLeft(panelRow.modelData, false)
                                         }
                                     }
                                 }

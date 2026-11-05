@@ -41,6 +41,7 @@ constexpr const char *SeekbarThumbKey = "appearance.seekbarThumb";
 constexpr const char *FidgetStyleKey = "appearance.fidgetStyle";
 constexpr const char *FidgetThumbKey = "appearance.fidgetThumb";
 constexpr const char *PanelOrderKey = "layout.panels";
+constexpr const char *LeftPanelsKey = "layout.leftPanels";
 constexpr const char *NavDividersKey = "layout.dividers";
 constexpr const char *HiddenPanelsKey = "layout.hidden";
 constexpr const char *StartPanelKey = "layout.start";
@@ -555,6 +556,31 @@ QStringList SettingsController::panelOrder() const
 QStringList SettingsController::hiddenPanels() const
 {
     return pathList(HiddenPanelsKey);
+}
+
+QStringList SettingsController::leftPanels() const
+{
+    // Never set: the Queue and Home on the left, as before the choice existed
+    if (m_settings->value(LeftPanelsKey, "?") == "?")
+        return {QStringLiteral("queue"), QStringLiteral("home")};
+    return pathList(LeftPanelsKey);
+}
+
+void SettingsController::setPanelLeft(const QString &panel, bool left)
+{
+    QStringList list = leftPanels();
+    list.removeAll(QStringLiteral("-"));
+    if (list.contains(panel) == left)
+        return;
+    if (left)
+        list << panel;
+    else
+        list.removeAll(panel);
+    list.removeAll(QStringLiteral("-"));
+    // (Never stored empty: "-" stands for "none on the left")
+    setPathList(LeftPanelsKey, list.isEmpty() ? QStringList{QStringLiteral("-")} : list);
+    scheduleSave();
+    emit panelsChanged();
 }
 
 void SettingsController::movePanel(int index, int delta)

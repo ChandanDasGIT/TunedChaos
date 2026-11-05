@@ -95,6 +95,8 @@ class SettingsController : public QObject
     // The bottom bar (phones): its panels in order, and the ones turned off
     Q_PROPERTY(QStringList panelOrder READ panelOrder NOTIFY panelsChanged)
     Q_PROPERTY(QStringList hiddenPanels READ hiddenPanels NOTIFY panelsChanged)
+    // Desktop columns: the panels in the left-hand one (the rest go right)
+    Q_PROPERTY(QStringList leftPanels READ leftPanels NOTIFY panelsChanged)
     // Thin lines between the bottom bar's icons
     Q_PROPERTY(bool navDividers READ navDividers WRITE setNavDividers NOTIFY navDividersChanged)
     // What opens at start: "player", "youtube", "queue", "home" or "library"
@@ -242,6 +244,8 @@ public:
     void setNavDividers(bool on);
     QStringList panelOrder() const;
     QStringList hiddenPanels() const;
+    QStringList leftPanels() const;
+    Q_INVOKABLE void setPanelLeft(const QString &panel, bool left);
     Q_INVOKABLE void movePanel(int index, int delta);
     Q_INVOKABLE void setPanelHidden(const QString &panel, bool hidden);
     QString startPanel() const;
