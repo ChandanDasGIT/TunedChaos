@@ -67,6 +67,7 @@ constexpr const char *LyricsSyncedKey = "lyrics.syncedByDefault";
 constexpr const char *LyricsLatinKey = "lyrics.latinScript";
 constexpr const char *YtLookupKey = "youtube.backgroundLookup";
 constexpr const char *AutoplayKey = "autoplay.mode";
+constexpr const char *PanelShareKey = "layout.panelShare";
 constexpr const char *AutoplayLastKey = "autoplay.lastMode"; // the last mode other than "off"
 // Before autoplay.mode: two switches (read once to pick the mode)
 constexpr const char *YtAutoplayKey = "youtube.autoplay";
@@ -899,6 +900,23 @@ void SettingsController::setYtBackgroundLookup(bool enabled)
     m_settings->setBool(YtLookupKey, enabled);
     scheduleSave();
     emit ytBackgroundLookupChanged();
+}
+
+double SettingsController::panelShare() const
+{
+    const double share = m_settings->doubleValue(PanelShareKey, 0);
+    return share >= 0.15 && share <= 0.85 ? share : 0;
+}
+
+void SettingsController::setPanelShare(double share)
+{
+    if (share != 0)
+        share = std::clamp(share, 0.15, 0.85);
+    if (qFuzzyCompare(share + 1, panelShare() + 1))
+        return;
+    m_settings->setDouble(PanelShareKey, share);
+    scheduleSave();
+    emit panelShareChanged();
 }
 
 static bool isAutoplayMode(const QString &mode)

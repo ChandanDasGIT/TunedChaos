@@ -9,9 +9,8 @@ ApplicationWindow {
     // ---- Layout -------------------------------------------------------------------
     // Picked by how much of the screen the window covers, so a full-screen
     // window behaves the same on any monitor:
-    //  "wide" (most of the screen): columns Queue or Home | Player | YouTube, Library or Settings;
-    //  "half": two columns at most, so an opened panel can push the player out
-    //          (a floating mini player then stands in for it);
+    //  "wide" / "half": the player and one panel beside it, on that panel's side
+    //          (the divider's position is kept: SettingsController.panelShare);
     //  "compact" (phone size): the player alone, panels slide over it as drawers.
     // The columns share the width equally. Queue and Home take turns in the
     // left-hand one (Home slides up over the Queue), YouTube and Library in the
@@ -83,8 +82,11 @@ ApplicationWindow {
     readonly property string leftPinned: { leftPanels; return pinnedOn(true) }
     readonly property string rightPinned: { leftPanels; return pinnedOn(false) }
     // What the columns show
-    readonly property string leftShown: compact ? "" : leftOpen !== "" ? leftOpen : leftPinned
-    readonly property string rightShown: compact || playerRecalled ? "" : rightOpen !== "" ? rightOpen : rightPinned
+    // Desktop: one panel beside the player, the one opened (else the pinned one)
+    readonly property string sideShown: compact ? "" : leftOpen !== "" ? leftOpen : rightOpen !== "" ? rightOpen
+                                                     : leftPinned !== "" ? leftPinned : rightPinned
+    readonly property string leftShown: sideShown !== "" && isLeft(sideShown) ? sideShown : ""
+    readonly property string rightShown: sideShown !== "" && !isLeft(sideShown) ? sideShown : ""
     function docked(name) {
         return leftShown === name || rightShown === name
     }
@@ -101,7 +103,7 @@ ApplicationWindow {
         else if (settingsPanel.page < 0)
             settingsPanel.intro()
     }
-    readonly property bool playerShown: layout !== "half" || !(leftShown !== "" && rightShown !== "")
+    readonly property bool playerShown: true
 
     function isLeft(name) {
         return leftPanels.includes(name)
@@ -118,18 +120,17 @@ ApplicationWindow {
         fixPins()
         for (const name of open)
             setOpen(name)
-        if (layout === "half" && leftOpen !== "" && rightOpen !== "") {
+        if (leftOpen !== "" && rightOpen !== "") {
             if (leftOpen === "settings")
                 rightOpen = ""
             else
                 leftOpen = ""
         }
     }
-    function fixPins() {
-        for (const left of [true, false]) {
-            const pinned = pinnablePanels.filter((name) => isLeft(name) === left && pinnedFlag(name))
-            pinned.slice(1).forEach((name) => setPinnedFlag(name, false))
-        }
+    function fixPins() { // one pinned panel at most (one panel beside the player)
+        const pinned = pinnablePanels.filter((name) => pinnedFlag(name))
+                                     .sort((a, b) => isLeft(b) - isLeft(a))
+        pinned.slice(1).forEach((name) => setPinnedFlag(name, false))
     }
     // Shown in its column (unpinned over a pinned one), without the half layout's rules
     function setOpen(name) {
@@ -145,12 +146,10 @@ ApplicationWindow {
         lastOpened = name
         if (isLeft(name)) {
             leftOpen = name === leftPinned ? "" : name
-            if (layout === "half")
-                rightOpen = "" // only one unpinned panel at a time
+            rightOpen = "" // one panel at a time
         } else {
             rightOpen = name === rightPinned ? "" : name
-            if (layout === "half")
-                leftOpen = ""
+            leftOpen = ""
         }
     }
     // Closing a pinned panel unpins it.
@@ -169,8 +168,7 @@ ApplicationWindow {
         if (!pinnablePanels.includes(name))
             return
         if (pinned)
-            pinnablePanels.filter((other) => other !== name && isLeft(other) === isLeft(name))
-                          .forEach((other) => setPinnedFlag(other, false))
+            pinnablePanels.filter((other) => other !== name).forEach((other) => setPinnedFlag(other, false))
         setPinnedFlag(name, pinned)
     }
     // A column's pin button: the panel stays open either way.
@@ -364,7 +362,7 @@ ApplicationWindow {
             setOpen("settings")
         }
         closeDrawers()
-        if (layout === "half" && leftOpen !== "" && rightOpen !== "")
+        if (leftOpen !== "" && rightOpen !== "")
             leftOpen = ""
     }
 
@@ -658,6 +656,30 @@ ApplicationWindow {
         readonly property real openColumns: Math.max(1, playlistSlot.openness + playerSlot.openness
                                                      + rightSlot.openness)
         readonly property real share: (width - (openColumns - 1) * Theme.cardGap) / openColumns
+        // ...and once the columns opening / closing have finished
+        readonly property int targetColumns: Math.max(1, (playlistSlot.docked ? 1 : 0) + (playerSlot.docked ? 1 : 0)
+                                                         + (rightSlot.docked ? 1 : 0))
+        readonly property real targetShare: (width - (targetColumns - 1) * Theme.cardGap) / targetColumns
+        // The side panel's width: as the divider was last dragged, else half
+        readonly property real sideShare: SettingsController.panelShare > 0
+                                          ? (width - Theme.cardGap) * SettingsController.panelShare
+                                          : (width - Theme.cardGap) / 2
+        // The divider let go: that width is kept (for every panel, also after a restart)
+        onResizingChanged: {
+            if (resizing)
+                return
+            const side = playlistSlot.docked ? playlistSlot : rightSlot.docked ? rightSlot : null
+            if (side && width > Theme.cardGap)
+                SettingsController.panelShare = (side.width - side.gaps) / (width - Theme.cardGap)
+        }
+        // The columns' height once the floating mini player has come / gone (see bottomMargin)
+        readonly property real targetHeight: height + floatingMini.height * (1 + Theme.cardGap / floatingMini.fullHeight)
+                                             - (floatingMini.shown ? floatingMini.fullHeight + Theme.cardGap : 0)
+        // The gaps between the cards belong to the side columns (on the player's
+        // side), so a gap opens and closes with its column, never all at once.
+        // Left: something is right of it (the player, else the right column).
+        readonly property real leftGap: Theme.cardGap * Math.min(1, playerSlot.openness + rightSlot.openness)
+        readonly property real rightGap: Theme.cardGap * playerSlot.openness
         // A column opened or closed: back to equal widths, even after the dividers were dragged.
         readonly property string columns: [window.leftShown !== "", window.playerShown, window.rightShown].join()
         onColumnsChanged: [playlistSlot, playerSlot, rightSlot].forEach((slot) => slot.equalize())
@@ -673,12 +695,25 @@ ApplicationWindow {
                               + floatingMini.height * (1 + Theme.cardGap / floatingMini.fullHeight)
         orientation: Qt.Horizontal
 
-        // The gap between cards; a small bar appears while hovered or dragged.
+        // The divider takes no room (the gaps are in the columns, see leftGap):
+        // it is grabbed over the gap beside it, where a small bar appears while
+        // hovered or dragged. Right of the player the gap is after it, else before.
         handle: Item {
-            implicitWidth: Theme.cardGap
+            id: divider
+            readonly property bool gapAfter: playerSlot.visible && x > playerSlot.x + 0.5
+            implicitWidth: 0
+            containmentMask: grabArea
+
+            Item {
+                id: grabArea
+                x: divider.gapAfter ? 0 : -Theme.cardGap
+                width: Theme.cardGap
+                height: divider.height
+            }
 
             Rectangle {
-                anchors.centerIn: parent
+                x: (divider.gapAfter ? Theme.cardGap : -Theme.cardGap) / 2 - width / 2
+                anchors.verticalCenter: parent.verticalCenter
                 width: 4
                 height: Math.min(parent.height * 0.3, 72)
                 radius: 2
@@ -693,6 +728,7 @@ ApplicationWindow {
         SideSlot {
             id: playlistSlot
             leftColumn: true
+            gapAfter: split.leftGap
             minimumWidth: 240
             SplitView.fillWidth: !window.playerShown && window.rightShown === ""
         }
@@ -702,6 +738,8 @@ ApplicationWindow {
             id: playerSlot
             docked: window.playerShown
             share: split.share
+            targetShare: split.targetShare
+            targetHeight: split.targetHeight
             minimumWidth: 280
             leftSide: !window.isLeft(window.lastOpened)
             SplitView.fillWidth: window.playerShown
@@ -729,6 +767,7 @@ ApplicationWindow {
         SideSlot {
             id: rightSlot
             leftColumn: false
+            gapBefore: split.rightGap
             minimumWidth: 320
             SplitView.fillWidth: !window.playerShown && docked
         }
@@ -769,7 +808,9 @@ ApplicationWindow {
         }
 
         docked: shown !== ""
-        share: split.share
+        share: split.sideShare
+        targetShare: split.sideShare
+        targetHeight: split.targetHeight
         leftSide: leftColumn
         // (Song rows keep their own swipe, delete: there only the header and empty space swipe)
         swipeEnabled: window.layout === "half" && !(face === "youtube" && shown === "youtube" && dockedYoutube.swipeBlocked)
@@ -851,7 +892,11 @@ ApplicationWindow {
         visible: current || opacity > 0
         z: current ? 1 : 0
         transform: Translate { x: (1 - dockedPlaylist.opacity) * 24 * (dockedPlaylist.slot.leftColumn ? -1 : 1) }
-        Behavior on opacity { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
+        // (Not while the column itself opens or closes: it fades and slides already)
+        Behavior on opacity {
+            enabled: dockedPlaylist.slot.openness === 1
+            NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel }
+        }
     }
     YouTubePanel {
         id: dockedYoutube
@@ -869,7 +914,11 @@ ApplicationWindow {
         visible: current || opacity > 0
         z: current ? 1 : 0
         transform: Translate { x: (1 - dockedYoutube.opacity) * 24 * (dockedYoutube.slot.leftColumn ? -1 : 1) }
-        Behavior on opacity { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
+        // (Not while the column itself opens or closes: it fades and slides already)
+        Behavior on opacity {
+            enabled: dockedYoutube.slot.openness === 1
+            NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel }
+        }
     }
     LibraryPanel {
         id: dockedLibrary
@@ -891,7 +940,11 @@ ApplicationWindow {
         visible: current || opacity > 0
         z: current ? 1 : 0
         transform: Translate { x: (1 - dockedLibrary.opacity) * 24 * (dockedLibrary.slot.leftColumn ? -1 : 1) }
-        Behavior on opacity { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
+        // (Not while the column itself opens or closes: it fades and slides already)
+        Behavior on opacity {
+            enabled: dockedLibrary.slot.openness === 1
+            NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel }
+        }
     }
     HomePanel {
         id: dockedHome
@@ -948,7 +1001,7 @@ ApplicationWindow {
         height: implicitHeight
         radius: Theme.radiusCard
         z: 5
-        active: (window.layout === "half" && !window.playerShown) || (window.compact && window.anyDrawerOpen)
+        active: window.compact && window.anyDrawerOpen
         acceptsDrops: true
         onOpenPlayerRequested: {
             if (window.compact) {

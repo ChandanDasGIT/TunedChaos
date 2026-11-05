@@ -144,12 +144,10 @@ chmod +x TunedChaos-*.AppImage
   Settings.
 - The layout follows how much of the screen the window covers, on any
   monitor:
-  - **full screen**: the Queue or Home, the player, and YouTube Music, the
-    Library or Settings side by side, sharing the width equally (Home and
-    Settings slide up over the panel under them);
-  - **half screen**: two columns at most; an opened panel can push the player
-    aside, and a floating mini player stands in for it. Panels can be swiped
-    away, or swiped in from the window's edge;
+  - **desktop**: the player and one panel beside it (the Queue or Home on
+    the left; YouTube Music, the Library or Settings on the right). Drag the
+    divider to set the panel's width: it is kept, also after a restart.
+    Panels can be swiped away, or swiped in from the window's edge;
   - **phone size**: the player, with panels sliding over it.
   Pinned panels stay open (also after a restart).
 - Theme: follow the system, dark or light. The background takes on the

@@ -1579,6 +1579,26 @@ Rectangle {
                         title: qsTr("Layout Customisation")
 
                         SettingsCard {
+                            visible: !root.android
+                            title: qsTr("Panel width")
+
+                            SettingsRow {
+                                Layout.fillWidth: true
+                                title: qsTr("Panel beside the player")
+                                description: SettingsController.panelShare > 0
+                                             ? qsTr("As you dragged the divider: %1% of the window.").arg(Math.round(SettingsController.panelShare * 100))
+                                             : qsTr("Half the window. Drag the divider to change it; that width is kept.")
+
+                                PillButton {
+                                    text: qsTr("Reset")
+                                    implicitHeight: 32
+                                    enabled: SettingsController.panelShare > 0
+                                    onClicked: SettingsController.panelShare = 0
+                                }
+                            }
+                        }
+
+                        SettingsCard {
                             title: qsTr("Bottom bar")
 
                             SettingsRow {

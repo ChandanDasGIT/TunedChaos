@@ -75,6 +75,8 @@ class SettingsController : public QObject
     //  "queue"   the Queue, whatever its last song
     //  "all"     every list (local, hosted, YouTube, playlists...) and the Queue
     Q_PROPERTY(QString autoplay READ autoplay WRITE setAutoplay NOTIFY autoplayChanged)
+    // Desktop: the side panel's share of the window, as the divider was dragged (0: half)
+    Q_PROPERTY(double panelShare READ panelShare WRITE setPanelShare NOTIFY panelShareChanged)
     // Playing a list (album, artist, playlist, YouTube...) adds it to the end of the Queue
     // instead of playing it on its own, out of sight; a Mix after it grows the Queue too.
     Q_PROPERTY(bool listsToQueue READ listsToQueue WRITE setListsToQueue NOTIFY listsToQueueChanged)
@@ -221,6 +223,8 @@ public:
     void setYtCookiesBrowser(const QString &browser);
     void setYtBackgroundLookup(bool enabled);
     QString autoplay() const;
+    double panelShare() const;
+    void setPanelShare(double share);
     void setAutoplay(const QString &mode);
     // The player's autoplay button: off, or back to the mode last chosen ("all" if none).
     Q_INVOKABLE void toggleAutoplay();
@@ -343,6 +347,7 @@ signals:
     void lyricsLatinScriptChanged();
     void ytBackgroundLookupChanged();
     void autoplayChanged();
+    void panelShareChanged();
     void appUpdateCheckChanged();
     void appUpdateSkippedChanged();
     void listsToQueueChanged();

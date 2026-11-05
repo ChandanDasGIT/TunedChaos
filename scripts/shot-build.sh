@@ -306,6 +306,25 @@ hook = '''    // ---- screenshot harness
         });
         QTimer::singleShot(2000 + qEnvironmentVariableIntValue("SHOT_FRAMES_OFFSET"), report, [report] { report->start(1300); });
     }
+    if (qEnvironmentVariableIsSet("SHOT_FILM")) { // "fromMs,toMs": every frame in between as build/shot/film/NNNN.png
+        auto *filmWindow = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst());
+        const int from = qEnvironmentVariable("SHOT_FILM").section(QLatin1Char(','), 0, 0).toInt();
+        const int to = qEnvironmentVariable("SHOT_FILM").section(QLatin1Char(','), 1, 1).toInt();
+        QDir().mkpath(QStringLiteral("build/shot/film"));
+        static QElapsedTimer filmClock;
+        static int filmFrame = 0;
+        filmClock.start();
+        QTimer *film = new QTimer(filmWindow);
+        film->setInterval(8);
+        QObject::connect(film, &QTimer::timeout, filmWindow, [filmWindow, film, to] {
+            if (filmClock.elapsed() > to) {
+                film->stop();
+                return;
+            }
+            filmWindow->grabWindow().save(QStringLiteral("build/shot/film/%1.png").arg(filmFrame++, 4, 10, QLatin1Char('0')));
+        });
+        QTimer::singleShot(from, film, [film] { film->start(); });
+    }
     if (qEnvironmentVariableIsSet("SHOT_TRACE")) { // every frame: scene x / width of these types (comma-separated), from the GUI thread
         auto *tw = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst());
         const QStringList types = qEnvironmentVariable("SHOT_TRACE").split(QLatin1Char(','));
