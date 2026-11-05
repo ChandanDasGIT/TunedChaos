@@ -235,6 +235,10 @@ public:
     void setAppUpdateCheck(bool enabled);
     QString appUpdateSkipped() const;
     void setAppUpdateSkipped(const QString &version);
+    // The version an update was handed over to install (AppUpdater): still
+    // older at the next start = the update didn't finish. "" = none.
+    QString appUpdatePending() const;
+    void setAppUpdatePending(const QString &version);
     bool listsToQueue() const;
     void setListsToQueue(bool enabled);
     bool eqEnabled() const;

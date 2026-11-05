@@ -1510,6 +1510,47 @@ Rectangle {
                                     onToggled: SettingsController.appUpdateCheck = checked
                                 }
                             }
+
+                            // Asked for now (AppUpdater.checkNow): a new version opens the update dialog
+                            SettingsRow {
+                                id: updateNowRow
+
+                                readonly property var updater: typeof AppUpdater !== "undefined" ? AppUpdater : null
+                                readonly property string checkState: updater !== null ? updater.checkState : ""
+
+                                Layout.fillWidth: true
+                                visible: updater !== null
+                                title: qsTr("Version %1").arg(Qt.application.version)
+                                description: checkState === "checking" ? qsTr("Checking for a new version…")
+                                           : checkState === "latest" ? qsTr("This is the newest version.")
+                                           : checkState === "failed" ? qsTr("Couldn't reach GitHub. Check your connection, or look on the releases page.")
+                                           : checkState === "found" ? qsTr("A new version is out.")
+                                           : qsTr("Look for a new version now.")
+
+                                RowLayout {
+                                    spacing: Theme.spacing
+
+                                    PillButton {
+                                        visible: updateNowRow.checkState === "failed"
+                                        iconName: "link"
+                                        iconSize: 11
+                                        text: qsTr("Releases page")
+                                        implicitHeight: 32
+                                        onClicked: updateNowRow.updater.openDownloadPage()
+                                    }
+
+                                    PillButton {
+                                        enabled: updateNowRow.checkState !== "checking"
+                                        iconName: "refresh"
+                                        iconSize: 11
+                                        text: updateNowRow.checkState === "checking" ? qsTr("Checking…")
+                                            : updateNowRow.checkState === "found" ? qsTr("Show update")
+                                            : qsTr("Check now")
+                                        implicitHeight: 32
+                                        onClicked: updateNowRow.updater.checkNow()
+                                    }
+                                }
+                            }
                         }
 
                         SettingsCard {

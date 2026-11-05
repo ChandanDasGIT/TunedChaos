@@ -4,7 +4,8 @@ import QtQuick.Layouts
 
 // A new version of the app: offers it, then shows its download and, on the
 // desktop, a restart once it's installed. Where the app can't install it
-// itself, it points to the release's page (updater is AppUpdater).
+// itself, it points to the release's page (updater is AppUpdater); so does any
+// failure, and an update that didn't take (unfinished), next to "Try again".
 Popup {
     id: root
 
@@ -16,6 +17,8 @@ Popup {
     readonly property int progress: updater !== null ? updater.progress : 0
     readonly property bool canInstall: updater !== null && updater.canInstall
     readonly property bool installed: updater !== null && updater.installed
+    readonly property bool unfinished: updater !== null && updater.unfinished
+    readonly property bool failed: error !== "" || unfinished
 
     anchors.centerIn: Overlay.overlay
     width: Math.min(Overlay.overlay ? Overlay.overlay.width - 2 * Theme.padding : 380, 380)
@@ -66,6 +69,7 @@ Popup {
                 : root.installed ? (Qt.platform.os === "windows" ? qsTr("Version %1 is ready").arg(root.version)
                                                                  : qsTr("Version %1 is installed").arg(root.version))
                 : root.downloading ? qsTr("Downloading version %1").arg(root.version)
+                : root.unfinished ? qsTr("The update didn't finish")
                 : qsTr("Update available")
             color: Theme.text
             font.pixelSize: Theme.fontSizeLarge
@@ -82,6 +86,10 @@ Popup {
                   : root.installed ? (Qt.platform.os === "windows"
                                       ? qsTr("Restart now: the app closes, installs it and starts again.")
                                       : qsTr("Restart the app to use it. The song you're playing picks up where it was."))
+                  : root.unfinished ? (root.canInstall
+                                       ? qsTr("Version %1 didn't install: you still have version %2. Try again, or download it yourself from its page.")
+                                       : qsTr("Version %1 didn't install: you still have version %2. Get it from its download page."))
+                                      .arg(root.version).arg(Qt.application.version)
                   : root.canInstall ? qsTr("Version %1 is available. You have version %2.").arg(root.version).arg(Qt.application.version)
                   : qsTr("Version %1 is available. You have version %2. Get it from its download page.")
                     .arg(root.version).arg(Qt.application.version)
@@ -94,7 +102,7 @@ Popup {
         ScrollView {
             Layout.fillWidth: true
             Layout.preferredHeight: Math.min(notesLabel.implicitHeight, 220)
-            visible: notesLabel.text !== "" && !root.downloading && !root.installed && !root.needsPermission
+            visible: notesLabel.text !== "" && !root.downloading && !root.installed && !root.needsPermission && !root.unfinished
             clip: true
             contentWidth: availableWidth
 
@@ -160,7 +168,7 @@ Popup {
                 text: root.needsPermission ? qsTr("Open settings")
                     : root.installed ? qsTr("Restart now")
                     : !root.canInstall ? qsTr("Download page")
-                    : root.error !== "" ? qsTr("Try again")
+                    : root.failed ? qsTr("Try again")
                     : qsTr("Update")
                 filled: true
                 implicitHeight: 36
@@ -179,9 +187,25 @@ Popup {
         }
 
         // (Its own line: three buttons don't fit next to each other on a phone)
+        // Something went wrong: the release's page, to get it by hand
         PillButton {
             Layout.alignment: Qt.AlignRight
-            visible: !root.downloading && !root.needsPermission && !root.installed
+            visible: root.failed && root.canInstall && !root.downloading && !root.needsPermission
+            iconName: "link"
+            iconSize: 11
+            text: qsTr("Download it yourself")
+            transparentIdle: true
+            iconColor: Theme.textMuted
+            implicitHeight: 36
+            onClicked: {
+                root.updater.openDownloadPage()
+                root.close()
+            }
+        }
+
+        PillButton {
+            Layout.alignment: Qt.AlignRight
+            visible: !root.failed && !root.downloading && !root.needsPermission && !root.installed
             text: qsTr("Skip this version")
             transparentIdle: true
             iconColor: Theme.textMuted

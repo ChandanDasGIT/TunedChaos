@@ -290,6 +290,44 @@ jobs:
             dist/*.tar.xz
             dist/SHA256SUMS.txt
 
+  # The Linux packages update themselves, through their own launchers (as a
+  # user's copy does), on the oldest system they run on and a current one
+  # (release/linux/test-update.sh). No release if this fails: 1.1.6's updater
+  # broke on newer systems, and only a local build had been tried.
+  update-test:
+    name: Update test (${{ matrix.name }})
+    needs: linux-packages
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu 24.04
+            image: ubuntu:24.04
+            setup: |
+              apt-get update
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends xz-utils \
+                libpipewire-0.3-0t64 libglx0 libopengl0 libegl1 libx11-6 libx11-xcb1 libdrm2 libfontconfig1 \
+                libfreetype6 libharfbuzz0b libfribidi0 libxcb1 libxcb-dri3-0 libice6 libsm6 libwayland-client0
+          - name: Fedora
+            image: fedora:latest
+            setup: |
+              dnf -y install xz tar findutils diffutils pipewire-libs libglvnd-glx libglvnd-opengl \
+                libglvnd-egl libX11 libX11-xcb libdrm fontconfig freetype harfbuzz fribidi libxcb libICE \
+                libSM libwayland-client
+    container:
+      image: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: TunedChaos-linux-x86_64
+          path: packages
+      - name: The system's usual libraries (a desktop has them)
+        run: ${{ matrix.setup }}
+      - name: Install, then update itself
+        run: bash release/linux/test-update.sh packages
+
   # The Flatpak, in Flathub's own build container (release/linux/flatpak)
   flatpak:
     name: Flatpak
@@ -310,7 +348,7 @@ jobs:
   publish:
     name: Publish the release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [linux, windows, android, linux-packages, flatpak]
+    needs: [linux, windows, android, linux-packages, flatpak, update-test]
     runs-on: ubuntu-latest
     permissions:
       contents: write # to create the release

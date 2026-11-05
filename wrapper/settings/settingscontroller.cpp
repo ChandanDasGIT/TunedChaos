@@ -73,6 +73,7 @@ constexpr const char *AutoplayLastKey = "autoplay.lastMode"; // the last mode ot
 constexpr const char *YtAutoplayKey = "youtube.autoplay";
 constexpr const char *AppUpdateCheckKey = "updates.check";
 constexpr const char *AppUpdateSkippedKey = "updates.skippedVersion";
+constexpr const char *AppUpdatePendingKey = "updates.pendingVersion";
 constexpr const char *YtQueueMixKey = "youtube.queueMix";
 constexpr const char *ListsToQueueKey = "playback.listsToQueue";
 constexpr const char *LetterGroupsKey = "library.letterGroups";
@@ -1003,6 +1004,19 @@ void SettingsController::setAppUpdateSkipped(const QString &version)
     m_settings->setValue(AppUpdateSkippedKey, version.toStdString());
     scheduleSave();
     emit appUpdateSkippedChanged();
+}
+
+QString SettingsController::appUpdatePending() const
+{
+    return QString::fromStdString(m_settings->value(AppUpdatePendingKey));
+}
+
+void SettingsController::setAppUpdatePending(const QString &version)
+{
+    if (version == appUpdatePending())
+        return;
+    m_settings->setValue(AppUpdatePendingKey, version.toStdString());
+    flush(); // (on disk at once: an installer may end the app any moment)
 }
 
 QString SettingsController::librarySource() const

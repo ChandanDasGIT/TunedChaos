@@ -77,6 +77,39 @@ git push origin v1.0
   `gh release delete v1.1-test1 --cleanup-tag`
 - To check a build without releasing: Actions > Build > Run workflow.
 
+## In-app updates
+
+The app looks for a newer release at startup (Settings > About: the switch,
+and "Check now", which also says when it's the newest or GitHub can't be
+reached). It installs the update the way that copy was installed
+(`wrapper/update/appupdater_<platform>.cpp`): Android's installer for the APK,
+the AppImage swapped in one step, the tarball's `install-app.sh` run, the
+Windows setup or portable ZIP once the app has closed. Flatpak and own builds
+only point to the release page.
+
+Nothing can strand a user:
+
+- Every failure shows what went wrong, "Try again" and "Download it
+  yourself" (the latest release's page): trying again is always up to you.
+- The version being installed is saved first. Still the older version at the
+  next start (or back from Android's installer without it): the app says the
+  update didn't finish, with the same two ways.
+- `install-app.sh` copies the new app next to the old one and swaps it in only
+  once it's complete; a failed copy leaves the old one as it was.
+- Programs the updater starts (tar, the installer) run without the app's
+  bundled libraries: the launcher points `LD_LIBRARY_PATH` at them, and
+  1.1.6's updater broke that way (system xz loading the bundled, older
+  liblzma).
+
+Before a release, CI installs the Linux packages in Ubuntu 24.04 and Fedora
+containers and lets them update themselves through their own launchers
+(`release/linux/test-update.sh`, which runs the app's hidden
+`--install-update <file>`); no release if that fails. To run it locally:
+`release/linux/test-update.sh build/packages`, in a container with the usual
+desktop libraries (see the `update-test` job). Test updaters only with real
+packages: a local build started by hand doesn't get the launcher's
+environment. Windows and Android updates are tested by hand.
+
 ## Building locally
 
 Linux:

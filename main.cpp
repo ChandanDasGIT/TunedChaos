@@ -58,6 +58,14 @@
 #include <QTimer>
 #endif
 
+#if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
+#include <QCoreApplication>
+#include <QDir>
+#include <QFile>
+
+#include <cstdio> // (--install-update's messages)
+#endif
+
 #ifdef Q_OS_WIN
 #include <shobjidl_core.h> // SetCurrentProcessExplicitAppUserModelID
 #endif
@@ -78,6 +86,30 @@ int main(int argc, char *argv[])
     for (const char *name : {"QT_PLUGIN_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH", "QT_QPA_PLATFORM",
                              "QML_IMPORT_PATH", "QML2_IMPORT_PATH", "QT_QUICK_CONTROLS_STYLE"})
         qunsetenv(name);
+#endif
+
+#if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
+    // For the release's update test (.github/workflows/build.yml): installs a
+    // downloaded package as the in-app updater does, without a window, then
+    // quits. (Started like the app, so the launcher's environment is the real one.)
+    if (argc == 3 && qstrcmp(argv[1], "--install-update") == 0) {
+        QCoreApplication app(argc, argv);
+        QCoreApplication::setApplicationName("TunedChaos");
+        QCoreApplication::setOrganizationName("TunedChaos");
+        if (UpdatePlatform::assetSuffix().isEmpty()) {
+            std::fprintf(stderr, "This copy can't install updates itself.\n");
+            return 2;
+        }
+        QDir().mkpath(UpdatePlatform::downloadFolder()); // (where it unpacks; a download made it)
+        bool restart = false;
+        const QString error = UpdatePlatform::install(QFile::decodeName(argv[2]), restart);
+        if (!error.isEmpty()) {
+            std::fprintf(stderr, "%s\n", qPrintable(error));
+            return 1;
+        }
+        std::printf("Installed.\n");
+        return 0;
+    }
 #endif
 
     // The app's folders from before its rename move to the new names first

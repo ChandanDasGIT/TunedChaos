@@ -4,7 +4,9 @@
 #   in ~/.local/bin, a launcher entry and its icon. (Not in ~/.local/share/
 #   TunedChaos: that holds your library and playlists.)
 # Run it from the unpacked folder: ./install-app.sh. Running it again updates
-# the app. Remove it with ./uninstall-app.sh (your music, settings and library stay).
+# the app (the app's own updater runs it too); until the new copy is complete,
+# the old one stays as it was. Remove it with ./uninstall-app.sh (your music,
+# settings and library stay).
 set -euo pipefail
 
 id=io.github.chandandasgit.TunedChaos
@@ -20,12 +22,46 @@ if [ ! -x "$here/app/AppRun" ]; then
     exit 1
 fi
 
-# The app (an older copy is replaced; so is one from when it was called ChaoticMusicPlayer)
-rm -rf "$target"
+# The app. The new copy goes next to the old one first and replaces it only
+# once it's complete, so a failed copy (disk full...) leaves the old one working.
+next="$target.new"
+previous="$target.old"
+restore() {
+    rm -rf "$next"
+    # (stopped between the two moves: the old copy goes back)
+    if [ ! -e "$target" ] && [ -e "$previous" ]; then
+        mv "$previous" "$target"
+    fi
+}
+swapped=0
+trap 'status=$?
+if [ $status -ne 0 ]; then
+    if [ $swapped = 1 ]; then
+        echo "The app is installed, but its menu entry or command couldn'"'"'t be set up." >&2
+    else
+        restore
+        echo "Not installed: the app you had is unchanged." >&2
+    fi
+fi' EXIT
+
+rm -rf "$next" "$previous"
+mkdir -p "$next"
+cp -a "$here/app/." "$next/"
+if [ ! -x "$next/AppRun" ] || [ ! -x "$next/usr/bin/TunedChaos" ] \
+    || [ "$(cd "$here/app" && find . | wc -l)" != "$(cd "$next" && find . | wc -l)" ]; then
+    echo "The copy is incomplete." >&2
+    exit 1
+fi
+if [ -e "$target" ]; then
+    mv "$target" "$previous"
+fi
+mv "$next" "$target"
+swapped=1
+rm -rf "$previous" # (a running copy carries on: its files stay until it closes)
+
+# One from when it was called ChaoticMusicPlayer goes
 old="io.github.chandandasgit.ChaoticMusicPlayer"
 rm -rf "$HOME/.local/opt/ChaoticMusicPlayer" "$bin/ChaoticMusicPlayer" "$apps/$old.desktop" "$icons/$old.svg"
-mkdir -p "$target"
-cp -a "$here/app/." "$target/"
 
 # Launcher entry and icon. Desktop files quote with "…"; inside, \ " ` $ are escaped.
 quoted="\"$(printf '%s' "$target/AppRun" | sed -e 's/[\\"`$]/\\&/g')\""
