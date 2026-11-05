@@ -191,9 +191,9 @@ Item {
                 spacing: 0
                 boundsBehavior: Flickable.StopAtBounds
                 model: [{ id: "", name: qsTr("Libraries") }].concat(HostedController.folderCrumbs)
-                // The deepest part stays in view
-                onCountChanged: Qt.callLater(positionViewAtEnd)
-                onWidthChanged: Qt.callLater(positionViewAtEnd)
+                // The deepest part stays in view (once the parts have their sizes)
+                onContentWidthChanged: contentX = Math.max(0, contentWidth - width)
+                onWidthChanged: contentX = Math.max(0, contentWidth - width)
 
                 delegate: Row {
                     id: crumb

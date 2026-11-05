@@ -4,6 +4,9 @@
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
+#include <cctype>
+
 using json = nlohmann::json;
 
 namespace {
@@ -122,6 +125,15 @@ HostedCollection collectionOf(const json &item, bool album)
         c.songCount = int(number(item, "ChildCount")); // albums, playlists, folders
     c.year = int(number(item, "ProductionYear"));
     return c;
+}
+
+// "/mnt/music/3. From soumya/FLAC SONGS" -> "FLAC SONGS" (either slash; "" for none)
+std::string lastPathPart(std::string path)
+{
+    while (!path.empty() && (path.back() == '/' || path.back() == '\\'))
+        path.pop_back();
+    const size_t slash = path.find_last_of("/\\");
+    return slash == std::string::npos ? path : path.substr(slash + 1);
 }
 
 // The "Items" array of a list answer (nothing if it isn't one).
@@ -325,7 +337,7 @@ std::optional<HostedServer::FolderContents> JellyfinServer::folder(const std::st
     const std::string query = id.empty()
         ? "/Users/" + user + "/Views"
         : "/Users/" + user + "/Items?ParentId=" + HttpClient::urlEncode(id)
-              + "&Fields=ChildCount&EnableTotalRecordCount=false"
+              + "&Fields=ChildCount,Path&EnableTotalRecordCount=false"
               + (sort == Sort::NameDesc ? "&SortBy=IsFolder,SortName&SortOrder=Descending"
                                         : "&SortBy=IsFolder,SortName&SortOrder=Ascending");
     const std::optional<std::string> body = get(query);
@@ -349,11 +361,28 @@ std::optional<HostedServer::FolderContents> JellyfinServer::folder(const std::st
         }
         const auto isFolder = item.find("IsFolder");
         if (isFolder != item.end() && isFolder->is_boolean() && isFolder->get<bool>()) {
-            if (text(item, "Type") != "Playlist")
-                out.folders.push_back(collectionOf(item, false));
+            if (text(item, "Type") != "Playlist") {
+                HostedCollection folder = collectionOf(item, false);
+                // A folder of songs is an album to Jellyfin, named from the songs' tags:
+                // the folder's own name is the end of its path
+                const std::string name = lastPathPart(text(item, "Path"));
+                if (!name.empty())
+                    folder.name = name;
+                out.folders.push_back(folder);
+            }
         } else if (text(item, "MediaType") == "Audio") {
             out.songs.push_back(songOf(item));
         }
+    }
+    // Sorted by the names shown (the server sorted by its own, the album names)
+    if (!id.empty() && (sort == Sort::Name || sort == Sort::NameDesc)) {
+        const auto lower = [](std::string text) {
+            std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) { return char(std::tolower(c)); });
+            return text;
+        };
+        std::stable_sort(out.folders.begin(), out.folders.end(), [&](const HostedCollection &a, const HostedCollection &b) {
+            return sort == Sort::NameDesc ? lower(b.name) < lower(a.name) : lower(a.name) < lower(b.name);
+        });
     }
     sortBySongCount(out.folders, sort);
     return out;
