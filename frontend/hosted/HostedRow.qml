@@ -2,8 +2,9 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// One row of the Hosted library: a song (with its length and an "add to the
-// Queue" button) or an album / artist / playlist (with a chevron).
+// One row of the Hosted library: a song (with its length, a heart for the
+// server's favourites, "add to the Queue" and a menu) or an album / artist /
+// playlist (with a chevron).
 Rectangle {
     id: root
 
@@ -13,9 +14,12 @@ Rectangle {
     property real duration: -1 // ms; -1: not a song
     property bool playing: false
     property string icon: isSong ? "music" : "compactDisc" // shown without a picture
+    property bool favorite: false
 
     signal tapped()
     signal queueRequested()
+    signal favoriteToggled()
+    signal menuRequested(Item button)
 
     readonly property bool isSong: duration >= 0
 
@@ -90,12 +94,33 @@ Rectangle {
 
         ControlButton {
             visible: root.isSong
+            iconName: "heart"
+            iconSize: 13
+            iconColor: root.favorite ? Theme.accent : Theme.textDim
+            ToolTip.visible: hovered
+            ToolTip.text: root.favorite ? qsTr("Remove from your favourites") : qsTr("Add to your favourites")
+            onClicked: root.favoriteToggled()
+        }
+
+        ControlButton {
+            visible: root.isSong
             iconName: "plus"
             iconSize: 13
             iconColor: Theme.textMuted
             ToolTip.visible: hovered
             ToolTip.text: qsTr("Add to the Queue")
             onClicked: root.queueRequested()
+        }
+
+        ControlButton {
+            id: moreButton
+            visible: root.isSong
+            iconName: "more"
+            iconSize: 13
+            iconColor: Theme.textMuted
+            ToolTip.visible: hovered
+            ToolTip.text: qsTr("More")
+            onClicked: root.menuRequested(moreButton)
         }
 
         Icon {

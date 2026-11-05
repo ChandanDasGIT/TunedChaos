@@ -335,6 +335,12 @@ Item {
                     }
                     onQueueRequested: HostedController.addToQueue(root.inFolders ? HostedController.FolderList
                                                                                  : HostedController.SongsList, songIndex)
+                    favorite: song && modelData.favorite === true
+                    onFavoriteToggled: HostedController.setFavorite(root.inFolders ? HostedController.FolderList
+                                                                                   : HostedController.SongsList,
+                                                                    songIndex, !favorite)
+                    onMenuRequested: (button) => songMenu.show(button, root.inFolders ? HostedController.FolderList
+                                                                                      : HostedController.SongsList, songIndex)
                 }
             }
         }
@@ -404,6 +410,9 @@ Item {
                     playing: modelData.path === PlayerController.source
                     onTapped: HostedController.play(HostedController.DetailList, index)
                     onQueueRequested: HostedController.addToQueue(HostedController.DetailList, index)
+                    favorite: modelData.favorite === true
+                    onFavoriteToggled: HostedController.setFavorite(HostedController.DetailList, index, !favorite)
+                    onMenuRequested: (button) => songMenu.show(button, HostedController.DetailList, index)
                 }
             }
         }
@@ -419,6 +428,63 @@ Item {
             visible = false
         }
         onClosed: visible = false
+    }
+
+    // A song's menu: to a server playlist; out of the opened playlist
+    ThemedMenu {
+        id: songMenu
+
+        property int list: 0
+        property int index: -1
+        property var choices: []
+
+        function show(button, list, index) {
+            songMenu.list = list
+            songMenu.index = index
+            choices = HostedController.playlistChoices()
+            popup(button, 0, button.height)
+        }
+
+        Action {
+            text: qsTr("Add to a new playlist…")
+            icon.name: "plus"
+            onTriggered: newPlaylistDialog.ask(qsTr("New playlist on the server"), "")
+        }
+        // (only in an opened playlist)
+        MenuItem {
+            visible: songMenu.list === HostedController.DetailList && HostedController.detailIsPlaylist
+            height: visible ? implicitHeight : 0
+            action: Action {
+                text: qsTr("Remove from this playlist")
+                icon.name: "trash"
+                onTriggered: HostedController.removeFromPlaylist(songMenu.index)
+            }
+        }
+        MenuSeparator {
+            visible: songMenu.choices.length > 0
+            height: visible ? implicitHeight : 0
+            contentItem: Rectangle {
+                implicitHeight: 1
+                color: Theme.border
+            }
+        }
+
+        Instantiator {
+            model: songMenu.choices
+            delegate: Action {
+                required property var modelData
+                text: qsTr("Add to %1").arg(modelData.name)
+                icon.name: "listMusic"
+                onTriggered: HostedController.addToPlaylist(songMenu.list, songMenu.index, modelData.id, modelData.name)
+            }
+            onObjectAdded: (index, object) => songMenu.insertAction(index + 3, object)
+            onObjectRemoved: (index, object) => songMenu.removeAction(object)
+        }
+    }
+
+    NameDialog {
+        id: newPlaylistDialog
+        onAccepted: (name) => HostedController.addToNewPlaylist(songMenu.list, songMenu.index, name)
     }
 
     // The tab's ways to sort (what the server can do), the one in use checked

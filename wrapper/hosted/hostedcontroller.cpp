@@ -58,6 +58,20 @@ HostedController::HostedController(PlayerController *player, PlaylistController 
     m_pool.setMaxThreadCount(2);
     useAccount();
 
+    // Play reports: in order, on their own thread; progress every 10 s while playing
+    m_reportPool.setMaxThreadCount(1);
+    m_reportTimer.setInterval(10000);
+    connect(&m_reportTimer, &QTimer::timeout, this, [this] {
+        if (!m_reportPath.isEmpty() && m_reportPlaying)
+            reportPlayback(int(HostedServer::PlayEvent::Progress), m_reportPath, m_reportPosition);
+    });
+    connect(m_player, &PlayerController::sourceChanged, this, &HostedController::followPlayback);
+    connect(m_player, &PlayerController::stateChanged, this, &HostedController::followPlayback);
+    connect(m_player, &PlayerController::positionChanged, this, [this] {
+        if (!m_reportPath.isEmpty() && m_player->source() == m_reportPath)
+            m_reportPosition = m_player->position();
+    });
+
     connect(m_settings, &SettingsController::letterGroupsChanged, this, &HostedController::letterTabsChanged);
     connect(m_settings, &SettingsController::hostedSortsChanged, this, &HostedController::letterTabsChanged);
     // A tab sorted differently: loaded again (the server sorts), shown ones at once
@@ -70,6 +84,9 @@ HostedController::HostedController(PlayerController *player, PlaylistController 
 
 HostedController::~HostedController()
 {
+    if (m_reportStarted)
+        reportPlayback(int(HostedServer::PlayEvent::Stopped), m_reportPath, m_reportPosition);
+    m_reportPool.waitForDone();
     m_pool.waitForDone(); // no task may post to a destroyed object
     s_instance = nullptr;
 }
@@ -154,6 +171,12 @@ void HostedController::useAccount()
     t.thumbnailUrl = m_store->coverUrl(m_accountId.toStdString(), song.coverId, CoverSize);
     if (song.hasGain && m_loudness)
         m_loudness->putServerGain(t.path, song.gainDb); // ReplayGain for it
+    // (const: the set is a cache of what the server said)
+    auto &favorites = const_cast<QSet<QString> &>(m_favorites);
+    if (song.favorite)
+        favorites.insert(qs(t.path));
+    else
+        favorites.remove(qs(t.path));
     return t;
 }
 
@@ -168,6 +191,7 @@ QVariantList HostedController::toSongList(const std::vector<::Track> &tracks) co
                                {QStringLiteral("album"), qs(t.album)},
                                {QStringLiteral("durationMs"), qint64(t.durationMs)},
                                {QStringLiteral("thumbnail"), qs(t.thumbnailUrl)},
+                               {QStringLiteral("favorite"), m_favorites.contains(qs(t.path))},
                                {QStringLiteral("letter"), letterOf(t.title)}});
     return out;
 }
@@ -275,6 +299,13 @@ void HostedController::load(int tab)
                          {QStringLiteral("thumbnail"),
                           qs(m_store->coverUrl(m_accountId.toStdString(), c.coverId, CoverSize))}});
                  }
+                 if (tab == PlaylistsTab) // the favourite songs first, as a playlist
+                     list.prepend(QVariantMap{{QStringLiteral("id"), QString::fromLatin1(FavoritesId)},
+                                              {QStringLiteral("name"), tr("Favourites")},
+                                              {QStringLiteral("subtitle"), tr("Songs with a heart")},
+                                              {QStringLiteral("count"), 0},
+                                              {QStringLiteral("letter"), QStringLiteral("#")},
+                                              {QStringLiteral("thumbnail"), QString()}});
                  fullListOf(tab) = list;
                  applySearch();
              });
@@ -287,14 +318,19 @@ void HostedController::open(int tab, const QString &id, const QString &name, con
         return;
     m_detailTitle = name;
     m_detailThumbnail = thumbnail;
+    m_detailKind = tab;
+    m_detailId = id;
     m_detailTracks.clear();
     m_detailSongs.clear();
+    m_detailEntryIds.clear();
     emit detailChanged();
 
     const HostedServer::Kind kind = kindOf(tab);
-    runAsync([account = *account, kind, id = id.toStdString()] {
+    const bool favorites = id == QLatin1String(FavoritesId);
+    runAsync([account = *account, kind, favorites, id = id.toStdString()] {
                  std::unique_ptr<HostedServer> server = HostedServer::open(account);
-                 auto songs = server ? server->songsOf(kind, id) : std::nullopt;
+                 auto songs = !server ? std::nullopt
+                            : favorites ? server->favorites(HostedServer::Sort::Name) : server->songsOf(kind, id);
                  return std::make_pair(songs, server ? server->lastError() : std::string("Unknown server"));
              },
              [this, name](const std::pair<std::optional<std::vector<HostedSong>>, std::string> &result) {
@@ -306,8 +342,11 @@ void HostedController::open(int tab, const QString &id, const QString &name, con
                  }
                  setError({});
                  m_detailTracks.clear();
-                 for (const HostedSong &song : *result.first)
+                 m_detailEntryIds.clear();
+                 for (const HostedSong &song : *result.first) {
                      m_detailTracks.push_back(trackOf(song));
+                     m_detailEntryIds.push_back(song.entryId);
+                 }
                  m_detailSongs = toSongList(m_detailTracks);
                  emit detailChanged();
              });
@@ -319,8 +358,11 @@ void HostedController::closeDetail()
         return;
     m_detailTitle.clear();
     m_detailThumbnail.clear();
+    m_detailKind = -1;
+    m_detailId.clear();
     m_detailTracks.clear();
     m_detailSongs.clear();
+    m_detailEntryIds.clear();
     emit detailChanged();
 }
 
@@ -542,4 +584,184 @@ void HostedController::applySearch()
         }
     }
     emit listsChanged();
+}
+
+// ---- Favourites and server playlists
+
+void HostedController::refreshFavoriteFlags()
+{
+    m_songs = toSongList(m_songTracks);
+    m_detailSongs = toSongList(m_detailTracks);
+    for (QVariant &entry : m_folderEntries) {
+        QVariantMap map = entry.toMap();
+        if (map.value(QStringLiteral("kind")) == QLatin1String("song")) {
+            map.insert(QStringLiteral("favorite"), m_favorites.contains(map.value(QStringLiteral("path")).toString()));
+            entry = map;
+        }
+    }
+    emit listsChanged();
+    emit detailChanged();
+    emit folderChanged();
+}
+
+void HostedController::setFavorite(int list, int index, bool favorite)
+{
+    const std::vector<::Track> &tracks = tracksOf(list);
+    const std::optional<HostedAccount> account = m_store->account(m_accountId.toStdString());
+    if (!account || index < 0 || size_t(index) >= tracks.size())
+        return;
+    const QString path = qs(tracks[size_t(index)].path);
+    // Shown at once; put back if the server says no
+    if (favorite)
+        m_favorites.insert(path);
+    else
+        m_favorites.remove(path);
+    refreshFavoriteFlags();
+    runAsync([account = *account, id = HostedPath::songId(path.toStdString()), favorite] {
+                 std::unique_ptr<HostedServer> server = HostedServer::open(account);
+                 const bool ok = server && server->setFavorite(id, favorite);
+                 return std::make_pair(ok, server ? server->lastError() : std::string("Unknown server"));
+             },
+             [this, path, favorite](const std::pair<bool, std::string> &result) {
+                 if (result.first) {
+                     emit notice(favorite ? tr("Added to your favourites") : tr("Removed from your favourites"));
+                     if (m_detailId == QLatin1String(FavoritesId) && !favorite) // the Favourites list shows it no more
+                         open(m_detailKind, m_detailId, m_detailTitle, m_detailThumbnail);
+                     return;
+                 }
+                 if (favorite)
+                     m_favorites.remove(path);
+                 else
+                     m_favorites.insert(path);
+                 refreshFavoriteFlags();
+                 emit notice(tr("Couldn't change the favourite: %1").arg(qs(result.second)));
+             });
+}
+
+QVariantList HostedController::playlistChoices()
+{
+    if (!m_loaded[PlaylistsTab])
+        load(PlaylistsTab);
+    QVariantList out;
+    for (const QVariant &entry : m_playlistsAll) {
+        const QVariantMap map = entry.toMap();
+        if (map.value(QStringLiteral("id")).toString() != QLatin1String(FavoritesId))
+            out.append(QVariantMap{{QStringLiteral("id"), map.value(QStringLiteral("id"))},
+                                   {QStringLiteral("name"), map.value(QStringLiteral("name"))}});
+    }
+    return out;
+}
+
+void HostedController::addToPlaylist(int list, int index, const QString &playlistId, const QString &playlistName)
+{
+    const std::vector<::Track> &tracks = tracksOf(list);
+    const std::optional<HostedAccount> account = m_store->account(m_accountId.toStdString());
+    if (!account || index < 0 || size_t(index) >= tracks.size() || playlistId.isEmpty())
+        return;
+    runAsync([account = *account, playlist = playlistId.toStdString(),
+              id = HostedPath::songId(tracks[size_t(index)].path)] {
+                 std::unique_ptr<HostedServer> server = HostedServer::open(account);
+                 const bool ok = server && server->addToPlaylist(playlist, {id});
+                 return std::make_pair(ok, server ? server->lastError() : std::string("Unknown server"));
+             },
+             [this, playlistName](const std::pair<bool, std::string> &result) {
+                 if (!result.first) {
+                     emit notice(tr("Couldn't add it: %1").arg(qs(result.second)));
+                     return;
+                 }
+                 emit notice(tr("Added to %1").arg(playlistName));
+                 if (m_loaded[PlaylistsTab])
+                     refresh(PlaylistsTab); // its song count
+             });
+}
+
+void HostedController::addToNewPlaylist(int list, int index, const QString &name)
+{
+    const std::vector<::Track> &tracks = tracksOf(list);
+    const std::optional<HostedAccount> account = m_store->account(m_accountId.toStdString());
+    if (!account || index < 0 || size_t(index) >= tracks.size() || name.trimmed().isEmpty())
+        return;
+    runAsync([account = *account, name = name.trimmed().toStdString(),
+              id = HostedPath::songId(tracks[size_t(index)].path)] {
+                 std::unique_ptr<HostedServer> server = HostedServer::open(account);
+                 const std::string created = server ? server->createPlaylist(name, {id}) : std::string();
+                 return std::make_pair(!created.empty(), server ? server->lastError() : std::string("Unknown server"));
+             },
+             [this, name](const std::pair<bool, std::string> &result) {
+                 if (!result.first) {
+                     emit notice(tr("Couldn't make the playlist: %1").arg(qs(result.second)));
+                     return;
+                 }
+                 emit notice(tr("Made the playlist %1").arg(name.trimmed()));
+                 refresh(PlaylistsTab);
+             });
+}
+
+void HostedController::removeFromPlaylist(int index)
+{
+    const std::optional<HostedAccount> account = m_store->account(m_accountId.toStdString());
+    if (!account || !detailIsPlaylist() || index < 0 || size_t(index) >= m_detailEntryIds.size()
+        || m_detailEntryIds[size_t(index)].empty())
+        return;
+    runAsync([account = *account, playlist = m_detailId.toStdString(), entry = m_detailEntryIds[size_t(index)]] {
+                 std::unique_ptr<HostedServer> server = HostedServer::open(account);
+                 const bool ok = server && server->removeFromPlaylist(playlist, {entry});
+                 return std::make_pair(ok, server ? server->lastError() : std::string("Unknown server"));
+             },
+             [this, playlist = m_detailId](const std::pair<bool, std::string> &result) {
+                 if (!result.first) {
+                     emit notice(tr("Couldn't remove it: %1").arg(qs(result.second)));
+                     return;
+                 }
+                 emit notice(tr("Removed from the playlist"));
+                 if (m_detailId == playlist)
+                     open(m_detailKind, m_detailId, m_detailTitle, m_detailThumbnail);
+                 if (m_loaded[PlaylistsTab])
+                     refresh(PlaylistsTab);
+             });
+}
+
+// ---- Play reports
+
+void HostedController::followPlayback()
+{
+    const QString path = m_player->source();
+    const bool playing = m_player->playing();
+    if (path != m_reportPath || (m_reportPath.isEmpty() && HostedPath::is(path.toStdString()))) {
+        if (m_reportStarted)
+            reportPlayback(int(HostedServer::PlayEvent::Stopped), m_reportPath, m_reportPosition);
+        m_reportPath = HostedPath::is(path.toStdString()) ? path : QString();
+        m_reportStarted = false;
+        m_reportPosition = 0;
+    }
+    if (m_reportPath.isEmpty()) {
+        m_reportTimer.stop();
+        return;
+    }
+    if (!m_reportStarted) {
+        if (!playing)
+            return; // loaded paused (e.g. the last session): reported once it plays
+        m_reportStarted = true;
+        m_reportPlaying = true;
+        reportPlayback(int(HostedServer::PlayEvent::Started), m_reportPath, m_player->position());
+        m_reportTimer.start();
+        return;
+    }
+    if (playing != m_reportPlaying) {
+        m_reportPlaying = playing;
+        reportPlayback(int(playing ? HostedServer::PlayEvent::Resumed : HostedServer::PlayEvent::Paused), m_reportPath,
+                       m_player->position());
+    }
+}
+
+void HostedController::reportPlayback(int event, const QString &path, qint64 positionMs)
+{
+    const std::string accountId = HostedPath::accountId(path.toStdString());
+    const std::optional<HostedAccount> account = m_store->account(accountId);
+    if (!account)
+        return;
+    m_reportPool.start([account = *account, event, id = HostedPath::songId(path.toStdString()), positionMs] {
+        if (std::unique_ptr<HostedServer> server = HostedServer::open(account))
+            server->reportPlayback(HostedServer::PlayEvent(event), id, positionMs);
+    });
 }

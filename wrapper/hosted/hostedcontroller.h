@@ -1,7 +1,9 @@
 #pragma once
 
 #include <QObject>
+#include <QSet>
 #include <QString>
+#include <QTimer>
 #include <QThreadPool>
 #include <QVariantList>
 #include <QtQml/qqmlregistration.h>
@@ -49,6 +51,8 @@ class HostedController : public QObject
     Q_PROPERTY(QString detailTitle READ detailTitle NOTIFY detailChanged)
     Q_PROPERTY(QString detailThumbnail READ detailThumbnail NOTIFY detailChanged)
     Q_PROPERTY(QVariantList detailSongs READ detailSongs NOTIFY detailChanged)
+    // The opened one is a server playlist (its songs can be removed from it)
+    Q_PROPERTY(bool detailIsPlaylist READ detailIsPlaylist NOTIFY detailChanged)
     // Folders tab: where it is ([{ id, name }], the music libraries first; [] = the top),
     // and what's in that folder: its folders [{ kind: "folder", id, name, subtitle }]
     // first, then its songs [{ kind: "song", path, title, ... }]
@@ -92,6 +96,7 @@ public:
     QString detailTitle() const { return m_detailTitle; }
     QString detailThumbnail() const { return m_detailThumbnail; }
     QVariantList detailSongs() const { return m_detailSongs; }
+    bool detailIsPlaylist() const { return m_detailKind == PlaylistsTab && m_detailId != QLatin1String(FavoritesId); }
     QVariantList folderCrumbs() const { return m_folderCrumbs; }
     QVariantList folderEntries() const { return m_folderEntries; }
     bool folderHasSongs() const { return !m_folderTracks.empty(); }
@@ -111,6 +116,17 @@ public:
     Q_INVOKABLE void openCrumb(int index); // -1: the top (the music libraries)
     Q_INVOKABLE bool folderUp();          // false: already at the top
     Q_INVOKABLE void playFolder();        // every song under the open folder, subfolders too
+    // A song of a list (as for play): favourite on the server or not
+    Q_INVOKABLE void setFavorite(int list, int index, bool favorite);
+    // ... to a server playlist (`playlistId` from the Playlists tab), or to a new one
+    Q_INVOKABLE void addToPlaylist(int list, int index, const QString &playlistId, const QString &playlistName);
+    Q_INVOKABLE void addToNewPlaylist(int list, int index, const QString &name);
+    // From the opened playlist (DetailList)
+    Q_INVOKABLE void removeFromPlaylist(int index);
+    // The server playlists to add to: [{ id, name }] (loads them if needed)
+    Q_INVOKABLE QVariantList playlistChoices();
+    // The Favourites list's id in the Playlists tab
+    static constexpr const char *FavoritesId = "@favorites";
 
 signals:
     void accountChanged();
@@ -132,6 +148,20 @@ private:
     QVariantList toSongList(const std::vector<::Track> &tracks) const;
     void loadFolder(); // what's in the folder of m_folderCrumbs' end (the top if none)
     const std::vector<::Track> &tracksOf(int list) const;
+    void refreshFavoriteFlags(); // the song lists' "favorite" after a change
+    // Play reports to the server of the song playing (in order, on their own thread)
+    void reportPlayback(int event, const QString &path, qint64 positionMs);
+    void followPlayback();
+    QString m_reportPath;    // the hosted song reported as playing ("" = none)
+    bool m_reportPlaying = false;
+    bool m_reportStarted = false; // Started was sent for m_reportPath
+    qint64 m_reportPosition = 0;
+    QTimer m_reportTimer;
+    QThreadPool m_reportPool;
+    QSet<QString> m_favorites; // paths of favourite songs
+    int m_detailKind = -1;     // the opened one's tab, and its id
+    QString m_detailId;
+    std::vector<std::string> m_detailEntryIds; // playlist entries, as detailSongs
 
     static inline HostedController *s_instance = nullptr;
 

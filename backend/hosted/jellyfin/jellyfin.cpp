@@ -102,6 +102,11 @@ HostedSong songOf(const json &item)
         song.hasGain = true;
         song.gainDb = gain->get<double>();
     }
+    if (const auto data = item.find("UserData"); data != item.end() && data->is_object()) {
+        const auto favorite = data->find("IsFavorite");
+        song.favorite = favorite != data->end() && favorite->is_boolean() && favorite->get<bool>();
+    }
+    song.entryId = text(item, "PlaylistItemId");
     return song;
 }
 
@@ -352,6 +357,99 @@ std::optional<HostedServer::FolderContents> JellyfinServer::folder(const std::st
     }
     sortBySongCount(out.folders, sort);
     return out;
+}
+
+std::optional<std::string> JellyfinServer::post(const std::string &pathAndQuery, const std::string &body)
+{
+    const HttpResponse response = HttpClient::post(m_account.serverUrl + pathAndQuery, body.empty() ? "{}" : body,
+                                                   headers(m_account.deviceId, m_account.token), TimeoutMs);
+    if (!response.ok()) {
+        m_error = reason(response);
+        return std::nullopt;
+    }
+    return response.body;
+}
+
+bool JellyfinServer::remove(const std::string &pathAndQuery)
+{
+    const HttpResponse response = HttpClient::remove(m_account.serverUrl + pathAndQuery,
+                                                     headers(m_account.deviceId, m_account.token), TimeoutMs);
+    if (!response.ok()) {
+        m_error = reason(response);
+        return false;
+    }
+    return true;
+}
+
+std::optional<std::vector<HostedSong>> JellyfinServer::favorites(Sort sort)
+{
+    return songList("/Users/" + HttpClient::urlEncode(m_account.userId)
+                    + "/Items?IncludeItemTypes=Audio&Recursive=true&Filters=IsFavorite&EnableTotalRecordCount=false"
+                    + sortQuery(sort, true));
+}
+
+bool JellyfinServer::setFavorite(const std::string &songId, bool favorite)
+{
+    // Jellyfin 10.9+: /UserFavoriteItems/{id}; older servers only know /Users/{user}/FavoriteItems/{id}
+    const std::string id = HttpClient::urlEncode(songId), user = HttpClient::urlEncode(m_account.userId);
+    const auto change = [&](const std::string &path) { return favorite ? post(path, {}).has_value() : remove(path); };
+    return change("/UserFavoriteItems/" + id + "?userId=" + user) || change("/Users/" + user + "/FavoriteItems/" + id);
+}
+
+namespace {
+
+std::string idList(const std::vector<std::string> &ids)
+{
+    std::string out;
+    for (const std::string &id : ids)
+        out += (out.empty() ? "" : ",") + HttpClient::urlEncode(id);
+    return out;
+}
+
+} // namespace
+
+std::string JellyfinServer::createPlaylist(const std::string &name, const std::vector<std::string> &songIds)
+{
+    const json body = {{"Name", name}, {"Ids", songIds}, {"UserId", m_account.userId}, {"MediaType", "Audio"}};
+    const std::optional<std::string> answer = post("/Playlists", body.dump());
+    if (!answer)
+        return {};
+    const json created = json::parse(*answer, nullptr, false);
+    const std::string id = created.is_object() ? text(created, "Id") : std::string();
+    if (id.empty())
+        m_error = "The server's answer couldn't be read";
+    return id;
+}
+
+bool JellyfinServer::addToPlaylist(const std::string &playlistId, const std::vector<std::string> &songIds)
+{
+    return post("/Playlists/" + HttpClient::urlEncode(playlistId) + "/Items?Ids=" + idList(songIds)
+                + "&UserId=" + HttpClient::urlEncode(m_account.userId), {}).has_value();
+}
+
+bool JellyfinServer::removeFromPlaylist(const std::string &playlistId, const std::vector<std::string> &entryIds)
+{
+    return remove("/Playlists/" + HttpClient::urlEncode(playlistId) + "/Items?EntryIds=" + idList(entryIds));
+}
+
+void JellyfinServer::reportPlayback(PlayEvent event, const std::string &songId, int64_t positionMs)
+{
+    json body = {{"ItemId", songId}, {"PositionTicks", positionMs * 10000}, {"CanSeek", true},
+                 {"PlayMethod", "DirectPlay"}, {"IsPaused", event == PlayEvent::Paused}};
+    switch (event) {
+    case PlayEvent::Started:
+        post("/Sessions/Playing", body.dump());
+        break;
+    case PlayEvent::Progress:
+    case PlayEvent::Paused:
+    case PlayEvent::Resumed:
+        body["EventName"] = event == PlayEvent::Paused ? "Pause" : event == PlayEvent::Resumed ? "Unpause" : "TimeUpdate";
+        post("/Sessions/Playing/Progress", body.dump());
+        break;
+    case PlayEvent::Stopped:
+        post("/Sessions/Playing/Stopped", body.dump());
+        break;
+    }
 }
 
 std::string JellyfinServer::streamUrl(const std::string &songId) const

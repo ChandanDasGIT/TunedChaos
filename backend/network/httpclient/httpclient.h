@@ -25,6 +25,10 @@ public:
                              const std::vector<std::string> &headers = {},
                              long timeoutMs = 10000);
 
+    // DELETE (servers' "remove this": a favourite, a playlist entry)
+    static HttpResponse remove(const std::string &url, const std::vector<std::string> &headers = {},
+                               long timeoutMs = 10000);
+
     // Percent-encodes a query parameter value.
     static std::string urlEncode(const std::string &value);
 

@@ -102,6 +102,10 @@ chmod +x TunedChaos-*.AppImage
 - **Folders** is browsed like a file manager: a path bar, then the folder's
   subfolders and songs; play or queue a whole folder, subfolders included.
 - The music folders (and the ones to leave out) are chosen in Settings.
+- **Hosted library**: your Jellyfin server's songs, albums, artists, genres,
+  playlists and folders play like your own. The server is told what you play
+  (now playing, play counts), the heart marks favourites on the server, and
+  songs can be added to or removed from its playlists.
 
 ### YouTube Music
 

@@ -53,7 +53,7 @@ size_t appendBody(char *data, size_t size, size_t count, void *userData)
 }
 
 HttpResponse perform(const std::string &url, const std::string *postBody,
-                     const std::vector<std::string> &headers, long timeoutMs)
+                     const std::vector<std::string> &headers, long timeoutMs, const char *method = nullptr)
 {
     ensureInitialized();
     HttpResponse response;
@@ -91,6 +91,8 @@ HttpResponse perform(const std::string &url, const std::string *postBody,
         curl_easy_setopt(handle, CURLOPT_POSTFIELDS, postBody->c_str());
         curl_easy_setopt(handle, CURLOPT_POSTFIELDSIZE, long(postBody->size()));
     }
+    if (method)
+        curl_easy_setopt(handle, CURLOPT_CUSTOMREQUEST, method);
 
     const CURLcode code = curl_easy_perform(handle);
     if (code != CURLE_OK) {
@@ -113,6 +115,11 @@ HttpResponse HttpClient::post(const std::string &url, const std::string &body,
                               const std::vector<std::string> &headers, long timeoutMs)
 {
     return perform(url, &body, headers, timeoutMs);
+}
+
+HttpResponse HttpClient::remove(const std::string &url, const std::vector<std::string> &headers, long timeoutMs)
+{
+    return perform(url, nullptr, headers, timeoutMs, "DELETE");
 }
 
 std::string HttpClient::urlEncode(const std::string &value)

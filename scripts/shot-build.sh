@@ -8,7 +8,7 @@ mkdir -p build/shot
 python3 -I - <<'PY'
 import pathlib
 s = pathlib.Path("main.cpp").read_text()
-s = "#include \"backend/library/metadata/metadata.h\"\n#include <QQmlContext>\n#include <QDir>\n#include <QTest>\n#include <cstdio>\n#include <QQuickWindow>\n#include <QTimer>\n#include <QImage>\n#include <functional>\n#include <QMouseEvent>\n#include <QQuickItem>\n#include <QUrl>\n#include <QMimeData>\n#include <QDropEvent>\n#include <QWheelEvent>\n" + s
+s = "#include \"backend/library/metadata/metadata.h\"\n#include <QQmlContext>\n#include <QQmlExpression>\n#include <QDir>\n#include <QTest>\n#include <cstdio>\n#include <QQuickWindow>\n#include <QTimer>\n#include <QImage>\n#include <functional>\n#include <QMouseEvent>\n#include <QQuickItem>\n#include <QUrl>\n#include <QMimeData>\n#include <QDropEvent>\n#include <QWheelEvent>\n" + s
 hook = '''    // ---- screenshot harness
     if (qEnvironmentVariableIsSet("SHOT_SIZE")) { // e.g. 400x780
         const QStringList wh = qEnvironmentVariable("SHOT_SIZE").split(QLatin1Char('x'));
@@ -446,6 +446,11 @@ hook = '''    // ---- screenshot harness
                     QObject *backup = engine.rootContext()->contextProperty(QStringLiteral("Backup")).value<QObject *>();
                     const bool save = step.startsWith(QLatin1String("backup:"));
                     QMetaObject::invokeMethod(backup, save ? "backUp" : "restore", Q_ARG(QString, step.section(QLatin1Char(':'), 1)));
+                } else if (step.startsWith(QLatin1String("js:"))) { // js:<expression> in Main's context (%20 = a space)
+                    QQmlExpression expression(qmlContext(root), root, step.mid(3).replace(QStringLiteral("%20"), QStringLiteral(" ")));
+                    const QVariant value = expression.evaluate();
+                    std::printf("js -> %s%s\\n", qPrintable(value.toString()),
+                                expression.hasError() ? qPrintable(QStringLiteral(" ERROR ") + expression.error().toString()) : "");
                 } else if (step.startsWith(QLatin1String("pin:")))
                     QMetaObject::invokeMethod(root, "togglePin", Q_ARG(QVariant, step.mid(4)));
                 else if (step.startsWith(QLatin1String("at:"))) { // press / release at x,y; print who grabbed it

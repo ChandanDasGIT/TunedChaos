@@ -39,6 +39,8 @@ struct HostedSong
     int64_t durationMs = 0;
     bool hasGain = false; // the server measured its loudness:
     double gainDb = 0;    // ReplayGain-style gain (to -18 LUFS)
+    bool favorite = false;
+    std::string entryId;  // in a playlist: this entry (to remove it); else ""
 };
 
 // An album, artist, genre, playlist or folder: something with songs in it.
@@ -98,6 +100,22 @@ public:
         std::vector<HostedSong> songs;
     };
     virtual std::optional<FolderContents> folder(const std::string &id, Sort sort) = 0;
+
+    // The user's favourite songs
+    virtual std::optional<std::vector<HostedSong>> favorites(Sort sort) = 0;
+
+    // Changes (blocking; false on failure, lastError() says why)
+    virtual bool setFavorite(const std::string &songId, bool favorite) = 0;
+    // A new playlist with these songs: its id ("" on failure)
+    virtual std::string createPlaylist(const std::string &name, const std::vector<std::string> &songIds) = 0;
+    virtual bool addToPlaylist(const std::string &playlistId, const std::vector<std::string> &songIds) = 0;
+    // `entryIds`: HostedSong::entryId of songs listed by songsOf(Playlists, playlistId)
+    virtual bool removeFromPlaylist(const std::string &playlistId, const std::vector<std::string> &entryIds) = 0;
+
+    // What plays, for the server's "now playing", play counts and resume points
+    // (blocking, from worker threads; failures are ignored).
+    enum class PlayEvent { Started, Progress, Paused, Resumed, Stopped };
+    virtual void reportPlayback(PlayEvent event, const std::string &songId, int64_t positionMs) = 0;
 
     // Addresses (no network): the song's audio as stored, a picture at about `size` pixels.
     virtual std::string streamUrl(const std::string &songId) const = 0;
