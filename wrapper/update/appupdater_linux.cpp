@@ -16,6 +16,17 @@
 
 namespace {
 
+// The system's tools, without the app's bundled libraries: the launcher points
+// LD_LIBRARY_PATH (and Qt's paths) at them, and e.g. xz then loads the app's
+// older liblzma and fails.
+QProcessEnvironment systemTools()
+{
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    for (const char *name : {"LD_LIBRARY_PATH", "QT_PLUGIN_PATH", "QML_IMPORT_PATH", "QML2_IMPORT_PATH"})
+        env.remove(QString::fromLatin1(name));
+    return env;
+}
+
 enum class Kind { None, AppImage, Tarball };
 
 // How this copy was installed. (Debug builds: TUNEDCHAOS_UPDATE_KIND pretends, for tests.)
@@ -87,6 +98,7 @@ QString UpdatePlatform::install(const QString &file, bool &restart)
     if (!unpacked.isValid())
         return QObject::tr("Couldn't unpack the update.");
     QProcess tar;
+    tar.setProcessEnvironment(systemTools());
     tar.start(QStringLiteral("tar"), {QStringLiteral("-xJf"), file, QStringLiteral("-C"), unpacked.path()});
     if (!tar.waitForFinished(180000) || tar.exitStatus() != QProcess::NormalExit || tar.exitCode() != 0)
         return QObject::tr("Couldn't unpack the update.");
@@ -97,6 +109,7 @@ QString UpdatePlatform::install(const QString &file, bool &restart)
     if (script.isEmpty())
         return QObject::tr("The update has no installer.");
     QProcess installer;
+    installer.setProcessEnvironment(systemTools());
     installer.setWorkingDirectory(QFileInfo(script).path());
     installer.start(QStringLiteral("bash"), {script});
     if (!installer.waitForFinished(180000) || installer.exitStatus() != QProcess::NormalExit || installer.exitCode() != 0)
