@@ -33,6 +33,17 @@ public class MainActivity extends QtActivity {
 
     // Back with nothing left to go back from: the app goes to the background
     // (like Home) instead of closing.
+    // Settings: the launcher's "Add widget?" for the player widget
+    public static boolean addPlayerWidget() {
+        final MainActivity activity = instance;
+        if (activity == null)
+            return false;
+        android.appwidget.AppWidgetManager manager = android.appwidget.AppWidgetManager.getInstance(activity);
+        if (!manager.isRequestPinAppWidgetSupported())
+            return false;
+        return manager.requestPinAppWidget(new android.content.ComponentName(activity, PlayerWidget.class), null, null);
+    }
+
     public static void minimize() {
         final MainActivity activity = instance;
         if (activity != null)
